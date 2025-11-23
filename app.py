@@ -6,6 +6,8 @@ import os
 from werkzeug.utils import secure_filename
 import numpy as np
 import io
+from urllib.parse import unquote
+import re
 
 # --- CONFIGURACIÓN SEGURA ---
 app = Flask(__name__)
@@ -28,17 +30,18 @@ class SistemaPocopan:
         self.df_catalogo = None
         self.catalogo_cargado = False
         self.productos_disponibles = []
-        self._lock = False  # Para prevenir race conditions
+        self._lock = False
         
         self.cargar_config()
         self.cargar_contadores()
         self.cargar_ventas()
         self.cargar_catalogo_automatico()
+        print("🎉 Sistema POCOPAN inicializado con amor 💖")
     
     def _wait_for_unlock(self):
         """Prevenir race conditions"""
         import time
-        timeout = 5  # 5 segundos máximo
+        timeout = 5
         start_time = time.time()
         while self._lock and (time.time() - start_time) < timeout:
             time.sleep(0.1)
@@ -66,7 +69,7 @@ class SistemaPocopan:
             else:
                 self.config = config_default
         except Exception as e:
-            print(f"Error cargando config (usando default): {e}")
+            print(f"Error cargando config: {e}")
             self.config = config_default
 
     def cargar_contadores(self):
@@ -86,7 +89,6 @@ class SistemaPocopan:
         try:
             if os.path.exists(app.config['ARCHIVO_VENTAS']):
                 self.df_ventas = pd.read_excel(app.config['ARCHIVO_VENTAS'])
-                # Validar columnas esenciales
                 columnas_requeridas = ['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
                                        'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal']
                 for col in columnas_requeridas:
@@ -111,7 +113,7 @@ class SistemaPocopan:
             if os.path.exists(archivo):
                 success, message = self.cargar_catalogo(archivo)
                 if success:
-                    print(f"✅ Catálogo cargado: {archivo}")
+                    print(f"✅ {message}")
                     return
         print("⚠️ No se encontró archivo de catálogo")
 
@@ -159,47 +161,47 @@ class SistemaPocopan:
             return False, f"Error cargando catálogo: {str(e)}"
     
     def obtener_detalles_producto(self, producto_nombre):
-        """Obtiene detalles de producto con validación - VERSIÓN CORREGIDA"""
+        """Obtiene detalles de producto - VERSIÓN SUPER MEJORADA 💖"""
         if not self.catalogo_cargado or not producto_nombre or self.df_catalogo is None:
-            print(f"❌ No se puede buscar: catalogo_cargado={self.catalogo_cargado}, producto={producto_nombre}")
             return None
         
         try:
-            print(f"🔍 Buscando producto: '{producto_nombre}'")
-            print(f"📊 Total productos en catálogo: {len(self.df_catalogo)}")
+            # Limpiar y normalizar el nombre de búsqueda
+            nombre_limpio = re.sub(r'\s+', ' ', producto_nombre).strip()
+            
+            print(f"🔍 Buscando producto: '{nombre_limpio}'")
             
             # Método 1: Búsqueda exacta
-            producto_exacto = self.df_catalogo[self.df_catalogo['Nombre'] == producto_nombre]
+            producto_exacto = self.df_catalogo[self.df_catalogo['Nombre'] == nombre_limpio]
             
             if not producto_exacto.empty:
                 producto = producto_exacto.iloc[0]
-                print(f"✅ Producto encontrado (exacto): {producto_nombre}")
+                print(f"✅ Encontrado (exacto): {nombre_limpio}")
             else:
-                # Método 2: Búsqueda insensible a mayúsculas y espacios
+                # Método 2: Búsqueda insensible a mayúsculas
                 producto_insensitive = self.df_catalogo[
-                    self.df_catalogo['Nombre'].str.strip().str.lower() == producto_nombre.strip().lower()
+                    self.df_catalogo['Nombre'].str.strip().str.lower() == nombre_limpio.lower()
                 ]
                 
                 if not producto_insensitive.empty:
                     producto = producto_insensitive.iloc[0]
-                    print(f"✅ Producto encontrado (insensitive): {producto_nombre}")
+                    print(f"✅ Encontrado (insensitive): {nombre_limpio}")
                 else:
                     # Método 3: Búsqueda parcial
                     producto_parcial = self.df_catalogo[
-                        self.df_catalogo['Nombre'].str.contains(producto_nombre, case=False, na=False)
+                        self.df_catalogo['Nombre'].str.contains(nombre_limpio, case=False, na=False)
                     ]
                     
                     if not producto_parcial.empty:
                         producto = producto_parcial.iloc[0]
-                        print(f"✅ Producto encontrado (parcial): {producto_nombre} -> {producto['Nombre']}")
+                        print(f"✅ Encontrado (parcial): {nombre_limpio} -> {producto['Nombre']}")
                     else:
-                        print(f"❌ Producto NO encontrado: '{producto_nombre}'")
-                        print(f"📝 Primeros 5 productos disponibles: {list(self.productos_disponibles[:5])}")
+                        print(f"❌ NO encontrado: '{nombre_limpio}'")
                         return None
             
             # Preparar respuesta
             detalles = {
-                'nombre': producto.get('Nombre', producto_nombre),
+                'nombre': producto.get('Nombre', nombre_limpio),
                 'precio': float(producto.get('Precio Venta', 0)),
                 'proveedor': producto.get('Proveedor', ''),
                 'categoria': producto.get('Categoría', ''),
@@ -207,13 +209,10 @@ class SistemaPocopan:
                 'subcategoria': producto.get('Subcategoría', '')
             }
             
-            print(f"📦 Detalles obtenidos: {detalles}")
             return detalles
             
         except Exception as e:
-            print(f"💥 Error crítico en obtener_detalles_producto: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            print(f"💥 Error en obtener_detalles_producto: {str(e)}")
             return None
 
     def buscar_productos(self, query, limit=10):
@@ -260,7 +259,7 @@ class SistemaPocopan:
                 cantidad = int(cantidad)
                 if cantidad <= 0:
                     return False, "La cantidad debe ser mayor a 0", carrito_actual
-                if cantidad > 100:  # Límite razonable
+                if cantidad > 100:
                     return False, "Cantidad excede el límite permitido", carrito_actual
             except ValueError:
                 return False, "Cantidad inválida", carrito_actual
@@ -282,7 +281,7 @@ class SistemaPocopan:
             }
             
             carrito_actual.append(item)
-            return True, "Producto agregado al carrito", carrito_actual
+            return True, f"✅ {producto_nombre} agregado al carrito", carrito_actual
             
         except Exception as e:
             return False, f"Error al agregar producto: {str(e)}", carrito_actual
@@ -294,8 +293,9 @@ class SistemaPocopan:
         try:
             index = int(index)
             if 0 <= index < len(carrito_actual):
+                producto_eliminado = carrito_actual[index]['producto']
                 carrito_actual.pop(index)
-                return True, "Item eliminado", carrito_actual
+                return True, f"🗑️ {producto_eliminado} eliminado", carrito_actual
             else:
                 return False, "Índice inválido", carrito_actual
         except (ValueError, IndexError):
@@ -304,7 +304,7 @@ class SistemaPocopan:
     def limpiar_carrito(self, carrito_actual):
         """Limpia el carrito completamente"""
         carrito_actual.clear()
-        return True, "Carrito limpiado", carrito_actual
+        return True, "🛒 Carrito limpiado", carrito_actual
     
     def calcular_totales(self, carrito_actual):
         """Calcula totales con validación"""
@@ -387,13 +387,12 @@ class SistemaPocopan:
     def guardar_ventas(self):
         """Guarda ventas de forma segura"""
         try:
-            # En Vercel no podemos guardar permanentemente, pero intentamos
             if os.environ.get('VERCEL') != '1':
                 self.df_ventas.to_excel(app.config['ARCHIVO_VENTAS'], index=False, engine='openpyxl')
             return True
         except Exception as e:
             print(f"⚠️ No se pudieron guardar ventas: {e}")
-            return True  # En Vercel siempre retorna True
+            return True
 
     def guardar_contadores(self):
         """Guarda contadores de forma segura"""
@@ -441,7 +440,7 @@ class SistemaPocopan:
                 'ventas_totales': total_ventas,
                 'ingresos_totales': f"{self.config['moneda']}{ingresos_totales:,.2f}",
                 'productos_catalogo': productos_disponibles,
-                'usuarios_activos': 1,  # En web, siempre hay al menos 1 usuario
+                'usuarios_activos': 1,
                 'ventas_hoy_count': ventas_hoy_count,
                 'dashboard_nombre': f"Dashboard - POCOPAN {terminal_nombre}",
                 'terminal_actual': app.config['ID_TERMINAL_ACTUAL']
@@ -461,15 +460,15 @@ class SistemaPocopan:
             'terminal_actual': app.config['ID_TERMINAL_ACTUAL']
         }
 
-# Instancia global segura
+# Instancia global con amor 💖
 try:
     sistema = SistemaPocopan()
-    print("✅ Sistema POCOPAN inicializado correctamente")
+    print("🎊 Sistema POCOPAN listo para amar 💝")
 except Exception as e:
-    print(f"❌ Error crítico al iniciar sistema: {e}")
+    print(f"❌ Error al iniciar sistema: {e}")
     sistema = None
 
-# --- RUTAS SEGURAS ---
+# --- RUTAS CON MUCHO AMOR ---
 
 def get_carrito():
     """Obtiene o crea carrito en sesión"""
@@ -512,13 +511,12 @@ def diagnostico():
     if sistema is None:
         return jsonify({
             'status': 'ERROR',
-            'mensaje': 'Sistema POCOPAN no pudo inicializarse',
-            'error': 'Fallo en inicialización del sistema'
+            'mensaje': 'Sistema POCOPAN no pudo inicializarse'
         }), 500
         
     return jsonify({
         'status': 'OK',
-        'mensaje': 'Sistema POCOPAN operativo',
+        'mensaje': 'Sistema POCOPAN operativo 💖',
         'terminal': app.config['ID_TERMINAL_ACTUAL'],
         'catalogo_cargado': sistema.catalogo_cargado,
         'productos_en_catalogo': len(sistema.productos_disponibles),
@@ -540,24 +538,34 @@ def buscar_productos_route():
 
 @app.route('/detalles-producto/<path:producto_nombre>')
 def detalles_producto(producto_nombre):
-    """API para detalles de producto - VERSIÓN CORREGIDA"""
+    """API para detalles de producto - VERSIÓN CORREGIDA CON AMOR 💕"""
     if sistema is None:
         return jsonify({'error': 'Sistema no disponible'}), 500
         
-    print(f"🌐 API llamada para producto: '{producto_nombre}'")
-    
-    detalles = sistema.obtener_detalles_producto(producto_nombre)
-    if detalles:
-        return jsonify(detalles)
-    else:
-        print(f"❌ API: Producto no encontrado - '{producto_nombre}'")
-        return jsonify({'error': f'Producto no encontrado: {producto_nombre}'}), 404
+    try:
+        # DECODIFICAR y LIMPIAR el nombre del producto
+        producto_decodificado = unquote(producto_nombre)
+        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
+        
+        print(f"🌐 Solicitado: '{producto_nombre}'")
+        print(f"✨ Limpio: '{producto_limpio}'")
+        
+        detalles = sistema.obtener_detalles_producto(producto_limpio)
+        if detalles:
+            return jsonify(detalles)
+        else:
+            print(f"❌ No encontrado: '{producto_limpio}'")
+            return jsonify({'error': f'Producto no encontrado: {producto_limpio}'}), 404
+            
+    except Exception as e:
+        print(f"💥 Error en detalles-producto: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
 
-# --- APIs del Carrito ---
+# --- APIs del Carrito 💝 ---
 
 @app.route('/agregar-carrito', methods=['POST'])
 def agregar_carrito():
-    """API para agregar producto al carrito - VERSIÓN CORREGIDA"""
+    """API para agregar producto al carrito"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
@@ -566,7 +574,7 @@ def agregar_carrito():
         producto = data.get('producto', '').strip()
         cantidad = data.get('cantidad', 1)
         
-        print(f"🛒 Agregando al carrito: '{producto}', cantidad: {cantidad}")
+        print(f"🛒 Agregando: '{producto}', cantidad: {cantidad}")
         
         if not producto:
             return jsonify({'success': False, 'message': 'Producto requerido'}), 400
@@ -642,7 +650,7 @@ def finalizar_venta():
         session['carrito'] = []
         return jsonify({
             'success': True,
-            'message': '✅ Venta finalizada exitosamente',
+            'message': '🎉 Venta finalizada exitosamente',
             'resumen': result,
             'id_cliente_actual': f"CLIENTE-{sistema.contador_clientes:04d}"
         })
@@ -651,21 +659,22 @@ def finalizar_venta():
 
 @app.route('/cargar-catalogo', methods=['POST'])
 def cargar_catalogo():
-    """API para cargar catálogo (no disponible en Vercel)"""
+    """API para cargar catálogo"""
     return jsonify({
         'success': False, 
-        'message': 'La carga de catálogo por archivo no está disponible en este entorno.'
+        'message': 'La carga de catálogo por archivo no está disponible.'
     }), 400
 
 # Manejo de errores
 @app.errorhandler(404)
 def not_found(error):
-    return render_template('error.html', mensaje="Página no encontrada"), 404
+    return render_template('error.html', mensaje="Página no encontrada 💔"), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    return render_template('error.html', mensaje="Error interno del servidor"), 500
+    return render_template('error.html', mensaje="Error interno del servidor 💔"), 500
 
 if __name__ == '__main__':
+    print("💕 Iniciando POCOPAN con mucho amor...")
     app.run(debug=False, host='0.0.0.0', port=5000)
     

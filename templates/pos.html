@@ -13,12 +13,15 @@
             --pocopan-success: #27ae60;
             --pocopan-danger: #e74c3c;
             --pocopan-warning: #f39c12;
+            --pocopan-love: #e84393;
         }
         
         .bg-pocopan { background-color: var(--pocopan-primary); }
         .text-pocopan { color: var(--pocopan-primary); }
         .btn-pocopan { background-color: var(--pocopan-secondary); color: white; }
         .btn-pocopan:hover { background-color: #2980b9; color: white; }
+        .btn-love { background-color: var(--pocopan-love); color: white; }
+        .btn-love:hover { background-color: #fd79a8; color: white; }
         
         .producto-item:hover { 
             background-color: #f8f9fa; 
@@ -33,17 +36,19 @@
         }
         
         .carrito-item:hover {
-            border-left-color: var(--pocopan-success);
+            border-left-color: var(--pocopan-love);
         }
         
         .catalogo-card {
             transition: all 0.3s ease;
             height: 100%;
+            border: 1px solid #e9ecef;
         }
         
         .catalogo-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border-color: var(--pocopan-love);
         }
         
         .search-highlight {
@@ -71,6 +76,11 @@
             min-height: 100vh;
         }
         
+        .love-badge {
+            background: linear-gradient(45deg, #e84393, #fd79a8);
+            color: white;
+        }
+        
         @media (max-width: 768px) {
             .sidebar {
                 min-height: auto;
@@ -78,8 +88,19 @@
         }
         
         .categoria-btn.active {
-            background-color: var(--pocopan-secondary) !important;
+            background-color: var(--pocopan-love) !important;
             color: white !important;
+            border-color: var(--pocopan-love) !important;
+        }
+        
+        .heart-pulse {
+            animation: heartBeat 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -93,7 +114,7 @@
             <div class="col-lg-2 sidebar p-3">
                 <div class="text-center mb-4">
                     <h4 class="fw-bold">🛍️ POCOPAN</h4>
-                    <small class="text-light">Sistema de Ventas</small>
+                    <small class="text-light">Hecho con amor 💝</small>
                 </div>
                 
                 <div class="d-grid gap-2 mb-4">
@@ -118,13 +139,13 @@
                 
                 <!-- Filtros por Categoría -->
                 <div class="mb-4">
-                    <h6 class="text-light mb-3"><i class="bi bi-filter"></i> Filtros</h6>
+                    <h6 class="text-light mb-3"><i class="bi bi-filter"></i> Filtros por Categoría</h6>
                     <div class="list-group">
                         <button class="list-group-item list-group-item-action active categoria-btn" data-categoria="all">
                             <i class="bi bi-grid-3x3"></i> Todos los Productos
                         </button>
-                        {% if sistema.catalogo_cargado %}
-                            {% set categorias = sistema.df_catalogo['Categoría'].unique() if 'Categoría' in sistema.df_catalogo.columns else [] %}
+                        {% if sistema.catalogo_cargado and sistema.df_catalogo is not none %}
+                            {% set categorias = sistema.df_catalogo['Categoría'].dropna().unique() %}
                             {% for categoria in categorias %}
                                 {% if categoria and categoria != '' %}
                                 <button class="list-group-item list-group-item-action categoria-btn" data-categoria="{{ categoria }}">
@@ -138,8 +159,8 @@
                 
                 <div class="mt-auto">
                     <div class="text-center small text-muted">
-                        <i class="bi bi-shield-check"></i> Sistema Seguro<br>
-                        <small>v2.0</small>
+                        <i class="bi bi-heart-fill text-danger heart-pulse"></i> Sistema Seguro<br>
+                        <small>v2.0 - Con amor</small>
                     </div>
                 </div>
             </div>
@@ -157,11 +178,11 @@
                                 <i class="bi bi-box-seam"></i> 
                                 <span id="totalProductos">{{ sistema.productos_disponibles|length }}</span> productos
                             </span>
-                            <span class="badge bg-info fs-6">
+                            <span class="badge love-badge fs-6">
                                 <i class="bi bi-tags"></i> 
                                 <span id="totalCategorias">
-                                    {% if sistema.catalogo_cargado %}
-                                        {{ sistema.df_catalogo['Categoría'].nunique() if 'Categoría' in sistema.df_catalogo.columns else 0 }}
+                                    {% if sistema.catalogo_cargado and sistema.df_catalogo is not none %}
+                                        {{ sistema.df_catalogo['Categoría'].nunique() }}
                                     {% else %}
                                         0
                                     {% endif %}
@@ -180,10 +201,10 @@
                                 <input type="text" 
                                        class="form-control" 
                                        id="buscarProducto" 
-                                       placeholder="Buscar producto por nombre... (mínimo 2 caracteres)"
+                                       placeholder="Buscar producto por nombre... 💕"
                                        autocomplete="off">
-                                <button class="btn btn-pocopan" type="button" id="btnBuscar">
-                                    Buscar
+                                <button class="btn btn-love" type="button" id="btnBuscar">
+                                    <i class="bi bi-search-heart"></i> Buscar
                                 </button>
                             </div>
                         </div>
@@ -197,14 +218,16 @@
                                 <div class="col-xl-3 col-lg-4 col-md-6" data-categoria="{{ producto.get('Categoría', '') }}">
                                     <div class="card catalogo-card h-100">
                                         <div class="card-body">
-                                            <h6 class="card-title fw-bold">{{ producto['Nombre'] }}</h6>
+                                            <h6 class="card-title fw-bold text-truncate" title="{{ producto['Nombre'] }}">
+                                                {{ producto['Nombre'] }}
+                                            </h6>
                                             <p class="card-text">
                                                 <strong class="text-success">${{ "%.2f"|format(producto.get('Precio Venta', 0)) }}</strong>
                                             </p>
                                             <small class="text-muted d-block">
                                                 <i class="bi bi-tag"></i> {{ producto.get('Categoría', 'Sin categoría') }}
                                             </small>
-                                            {% if producto.get('Subcategoría') %}
+                                            {% if producto.get('Subcategoría') and producto.get('Subcategoría') != '' %}
                                             <small class="text-muted d-block">
                                                 <i class="bi bi-diagram-2"></i> {{ producto.get('Subcategoría', '') }}
                                             </small>
@@ -231,7 +254,7 @@
                             <div class="col-12 text-center py-5">
                                 <i class="bi bi-exclamation-triangle display-1 text-muted"></i>
                                 <h5 class="text-muted mt-3">Catálogo no disponible</h5>
-                                <p class="text-muted">No se pudo cargar el catálogo de productos</p>
+                                <p class="text-muted">No se pudo cargar el catálogo de productos 💔</p>
                             </div>
                         {% endif %}
                     </div>
@@ -241,7 +264,7 @@
             <!-- Carrito/Resumen de Venta (DERECHA) -->
             <div class="col-lg-3 carrito-section">
                 <div class="p-4">
-                    <h4 class="fw-bold mb-4">
+                    <h4 class="fw-bold mb-4 text-pocopan">
                         <i class="bi bi-cart-check"></i> Resumen de Venta
                     </h4>
 
@@ -258,7 +281,9 @@
                                     <div class="carrito-item card mb-2 shadow-sm">
                                         <div class="card-body py-2">
                                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="fw-bold mb-0">{{ item.producto }}</h6>
+                                                <h6 class="fw-bold mb-0 text-truncate" style="max-width: 70%;" title="{{ item.producto }}">
+                                                    {{ item.producto }}
+                                                </h6>
                                                 <button class="btn btn-sm btn-outline-danger" onclick="eliminarDelCarrito({{ loop.index0 }})">
                                                     <i class="bi bi-x"></i>
                                                 </button>
@@ -291,6 +316,7 @@
                                     <div class="text-center py-4">
                                         <i class="bi bi-cart-x display-6 text-muted"></i>
                                         <p class="text-muted mt-2 mb-0">El carrito está vacío</p>
+                                        <small class="text-muted">Agrega productos desde el catálogo 💝</small>
                                     </div>
                                 {% endif %}
                             </div>
@@ -305,16 +331,16 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Subtotal:</span>
-                                <strong>${{ "%.2f"|format(totales.subtotal) }}</strong>
+                                <strong id="subtotalDisplay">${{ "%.2f"|format(totales.subtotal) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span>IVA ({{ totales.porcentaje_iva }}%):</span>
-                                <strong>${{ "%.2f"|format(totales.iva) }}</strong>
+                                <strong id="ivaDisplay">${{ "%.2f"|format(totales.iva) }}</strong>
                             </div>
                             <hr>
                             <div class="d-flex justify-content-between mb-3 fs-5">
                                 <span><strong>Total:</strong></span>
-                                <strong class="text-success">${{ "%.2f"|format(totales.total) }}</strong>
+                                <strong class="text-success" id="totalDisplay">${{ "%.2f"|format(totales.total) }}</strong>
                             </div>
                         </div>
                     </div>
@@ -334,7 +360,7 @@
 
                     <!-- Estadísticas rápidas -->
                     <div class="mt-4 p-3 bg-light rounded">
-                        <h6 class="fw-bold">Resumen Rápido</h6>
+                        <h6 class="fw-bold text-pocopan">Resumen Rápido</h6>
                         <div class="row text-center">
                             <div class="col-6">
                                 <div class="border rounded p-2">
@@ -349,6 +375,12 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="mt-2 text-center">
+                            <small class="text-muted">
+                                <i class="bi bi-heart-fill text-danger"></i> 
+                                Hecho con amor para POCOPAN
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -359,41 +391,26 @@
     <div class="modal fade" id="modalProducto" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Agregar Producto al Carrito</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-pocopan text-white">
+                    <h5 class="modal-title"><i class="bi bi-cart-plus"></i> Agregar Producto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div id="detallesProducto"></div>
                     <div class="mb-3">
-                        <label for="cantidadProducto" class="form-label">Cantidad:</label>
+                        <label for="cantidadProducto" class="form-label">
+                            <i class="bi bi-123"></i> Cantidad:
+                        </label>
                         <input type="number" class="form-control" id="cantidadProducto" value="1" min="1" max="100">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnAgregarProducto">Agregar al Carrito</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Editar Producto -->
-    <div class="modal fade" id="modalEditarProducto" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar Producto</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="formEditarProducto">
-                        <!-- Formulario se llenará dinámicamente -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" id="btnGuardarProducto">Guardar Cambios</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-love" id="btnAgregarProducto">
+                        <i class="bi bi-cart-check"></i> Agregar al Carrito
+                    </button>
                 </div>
             </div>
         </div>
@@ -422,27 +439,24 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Variables globales
+        // Variables globales con amor 💖
         let productoSeleccionado = null;
-        let modalProducto = new bootstrap.Modal(document.getElementById('modalProducto'));
-        let modalVentaExitosa = new bootstrap.Modal(document.getElementById('modalVentaExitosa'));
+        let modalProducto = null;
+        let modalVentaExitosa = null;
 
-        // Debug: Verificar que todo cargó correctamente
-        console.log('Script cargado correctamente');
-        console.log('Carrito inicial:', {{ carrito|tojson }});
-
-        // Configuración inicial cuando el DOM está listo
+        // Inicialización con amor
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM completamente cargado');
+            console.log('💝 POCOPAN cargado con éxito');
             
-            // Configurar búsqueda
+            modalProducto = new bootstrap.Modal(document.getElementById('modalProducto'));
+            modalVentaExitosa = new bootstrap.Modal(document.getElementById('modalVentaExitosa'));
+            
+            // Configurar búsqueda en tiempo real
             const buscarInput = document.getElementById('buscarProducto');
             if (buscarInput) {
                 buscarInput.addEventListener('input', function() {
                     const query = this.value.trim();
-                    if (query.length >= 2) {
-                        buscarProductos(query);
-                    }
+                    filtrarProductos(query);
                 });
             }
 
@@ -457,43 +471,47 @@
                     filtrarPorCategoria(categoria);
                 });
             });
+            
+            console.log('🎯 Sistema listo para usar');
         });
 
-        // ========== FUNCIONES DEL CARRITO (DEBUGGEADAS) ==========
+        // ========== FUNCIONES PRINCIPALES CON AMOR ==========
 
         function seleccionarProducto(nombreProducto) {
-            console.log('Producto seleccionado:', nombreProducto);
+            console.log('🛍️ Producto seleccionado:', nombreProducto);
             productoSeleccionado = nombreProducto;
             
+            // Limpiar y preparar el nombre para la URL
+            const nombreLimpio = nombreProducto.trim().replace(/\s+/g, ' ');
+            console.log('✨ Nombre limpio:', nombreLimpio);
+            
             // Cargar detalles del producto
-            fetch('/detalles-producto/' + encodeURIComponent(nombreProducto))
+            fetch('/detalles-producto/' + encodeURIComponent(nombreLimpio))
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Error en la respuesta del servidor');
+                        throw new Error('Error del servidor: ' + response.status);
                     }
                     return response.json();
                 })
                 .then(detalles => {
-                    console.log('Detalles del producto:', detalles);
+                    console.log('📦 Detalles recibidos:', detalles);
                     if (detalles.error) {
-                        mostrarAlerta('Error: ' + detalles.error, 'danger');
+                        mostrarAlerta('❌ ' + detalles.error, 'danger');
                         return;
                     }
                     mostrarModalProducto(detalles);
                 })
                 .catch(error => {
-                    console.error('Error cargando detalles:', error);
-                    mostrarAlerta('Error al cargar detalles del producto: ' + error.message, 'danger');
+                    console.error('💥 Error:', error);
+                    mostrarAlerta('❌ Error al cargar detalles: ' + error.message, 'danger');
                 });
         }
 
         function mostrarModalProducto(detalles) {
-            console.log('Mostrando modal para:', detalles);
-            
             const contenido = `
                 <div class="mb-3">
-                    <h6>${detalles.nombre}</h6>
-                    <p class="mb-1"><strong>Precio:</strong> $${detalles.precio ? detalles.precio.toFixed(2) : '0.00'}</p>
+                    <h6 class="text-success">${detalles.nombre}</h6>
+                    <p class="mb-1"><strong>Precio:</strong> $${detalles.precio.toFixed(2)}</p>
                     <p class="mb-1"><strong>Categoría:</strong> ${detalles.categoria || 'N/A'}</p>
                     <p class="mb-0"><strong>Proveedor:</strong> ${detalles.proveedor || 'N/A'}</p>
                 </div>
@@ -507,7 +525,7 @@
             btnAgregar.onclick = function() {
                 const cantidad = parseInt(document.getElementById('cantidadProducto').value);
                 if (isNaN(cantidad) || cantidad < 1) {
-                    mostrarAlerta('La cantidad debe ser un número válido', 'warning');
+                    mostrarAlerta('❌ La cantidad debe ser un número válido', 'warning');
                     return;
                 }
                 agregarAlCarrito(productoSeleccionado, cantidad);
@@ -517,14 +535,12 @@
         }
 
         function agregarAlCarrito(producto, cantidad) {
-            console.log('Intentando agregar al carrito:', producto, cantidad);
+            console.log('🛒 Agregando al carrito:', producto, cantidad);
             
             const datos = {
                 producto: producto,
                 cantidad: cantidad
             };
-            
-            console.log('Enviando datos:', datos);
             
             fetch('/agregar-carrito', {
                 method: 'POST',
@@ -534,33 +550,30 @@
                 body: JSON.stringify(datos)
             })
             .then(response => {
-                console.log('Respuesta del servidor:', response.status);
                 if (!response.ok) {
                     throw new Error('Error HTTP: ' + response.status);
                 }
                 return response.json();
             })
             .then(data => {
-                console.log('Datos recibidos:', data);
+                console.log('✅ Respuesta:', data);
                 
                 if (data.success) {
                     actualizarInterfaz(data);
                     modalProducto.hide();
-                    mostrarAlerta('✅ ' + data.message, 'success');
+                    mostrarAlerta(data.message, 'success');
                 } else {
                     mostrarAlerta('❌ ' + data.message, 'warning');
                 }
             })
             .catch(error => {
-                console.error('Error en fetch:', error);
+                console.error('💥 Error:', error);
                 mostrarAlerta('❌ Error de conexión: ' + error.message, 'danger');
             });
         }
 
         function eliminarDelCarrito(index) {
-            console.log('Eliminando item del carrito:', index);
-            
-            if (!confirm('¿Estás seguro de eliminar este producto del carrito?')) {
+            if (!confirm('¿Estás seguro de eliminar este producto del carrito? 💔')) {
                 return;
             }
             
@@ -574,24 +587,20 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Respuesta eliminar:', data);
-                
                 if (data.success) {
                     actualizarInterfaz(data);
-                    mostrarAlerta('🗑️ ' + data.message, 'info');
+                    mostrarAlerta(data.message, 'info');
                 } else {
                     mostrarAlerta('❌ ' + data.message, 'warning');
                 }
             })
             .catch(error => {
-                console.error('Error eliminando:', error);
-                mostrarAlerta('❌ Error al eliminar producto: ' + error.message, 'danger');
+                console.error('💥 Error:', error);
+                mostrarAlerta('❌ Error al eliminar producto', 'danger');
             });
         }
 
         function actualizarInterfaz(data) {
-            console.log('Actualizando interfaz con:', data);
-            
             // Actualizar contadores
             if (data.carrito) {
                 document.getElementById('contadorCarrito').textContent = data.carrito.length;
@@ -617,7 +626,6 @@
         }
 
         function actualizarVistaCarrito(carrito) {
-            console.log('Actualizando vista del carrito:', carrito);
             const contenedor = document.getElementById('carritoContenido');
             
             if (!carrito || carrito.length === 0) {
@@ -625,6 +633,7 @@
                     <div class="text-center py-4">
                         <i class="bi bi-cart-x display-6 text-muted"></i>
                         <p class="text-muted mt-2 mb-0">El carrito está vacío</p>
+                        <small class="text-muted">Agrega productos desde el catálogo 💝</small>
                     </div>
                 `;
                 return;
@@ -636,7 +645,9 @@
                     <div class="carrito-item card mb-2 shadow-sm">
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h6 class="fw-bold mb-0">${item.producto}</h6>
+                                <h6 class="fw-bold mb-0 text-truncate" style="max-width: 70%;" title="${item.producto}">
+                                    ${item.producto}
+                                </h6>
                                 <button class="btn btn-sm btn-outline-danger" onclick="eliminarDelCarrito(${index})">
                                     <i class="bi bi-x"></i>
                                 </button>
@@ -644,7 +655,7 @@
                             <div class="row g-2">
                                 <div class="col-6">
                                     <small class="text-muted">Precio:</small>
-                                    <div><strong>$${item.precio ? item.precio.toFixed(2) : '0.00'}</strong></div>
+                                    <div><strong>$${item.precio.toFixed(2)}</strong></div>
                                 </div>
                                 <div class="col-6">
                                     <small class="text-muted">Cantidad:</small>
@@ -660,7 +671,7 @@
                             </div>
                             <div class="mt-2 text-end">
                                 <small class="text-muted">Subtotal: </small>
-                                <strong class="text-success">$${item.subtotal ? item.subtotal.toFixed(2) : '0.00'}</strong>
+                                <strong class="text-success">$${item.subtotal.toFixed(2)}</strong>
                             </div>
                         </div>
                     </div>
@@ -671,41 +682,28 @@
         }
 
         function actualizarTotales(totales) {
-            console.log('Actualizando totales:', totales);
-            
-            // Buscar y actualizar los elementos de totales
-            const elementos = document.querySelectorAll('.card-body .d-flex.justify-content-between');
-            elementos.forEach(function(el, index) {
-                const strongElement = el.querySelector('strong');
-                if (strongElement) {
-                    if (index === 0) strongElement.textContent = '$' + (totales.subtotal ? totales.subtotal.toFixed(2) : '0.00');
-                    if (index === 1) strongElement.textContent = '$' + (totales.iva ? totales.iva.toFixed(2) : '0.00');
-                    if (index === 2) strongElement.textContent = '$' + (totales.total ? totales.total.toFixed(2) : '0.00');
-                }
-            });
+            document.getElementById('subtotalDisplay').textContent = '$' + totales.subtotal.toFixed(2);
+            document.getElementById('ivaDisplay').textContent = '$' + totales.iva.toFixed(2);
+            document.getElementById('totalDisplay').textContent = '$' + totales.total.toFixed(2);
         }
 
         function actualizarCantidad(index, nuevaCantidad) {
             const cantidad = parseInt(nuevaCantidad);
-            console.log('Actualizando cantidad:', index, cantidad);
             
             if (isNaN(cantidad) || cantidad < 1 || cantidad > 100) {
-                mostrarAlerta('La cantidad debe estar entre 1 y 100', 'warning');
+                mostrarAlerta('❌ La cantidad debe estar entre 1 y 100', 'warning');
                 return;
             }
             
-            // Para simplicidad, eliminamos y volvemos a agregar
-            // En un sistema real, tendrías un endpoint para actualizar cantidad
-            eliminarDelCarrito(index);
-            setTimeout(function() {
-                // Necesitaríamos guardar el producto antes de eliminarlo
-                // Por ahora, esta función es básica
-                mostrarAlerta('Actualiza la cantidad manualmente agregando de nuevo', 'info');
-            }, 100);
+            // Para simplicidad, recargamos la página para actualizar
+            mostrarAlerta('🔄 Actualizando cantidad...', 'info');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
         }
 
         function limpiarCarrito() {
-            if (!confirm('¿Estás seguro de limpiar todo el carrito?')) {
+            if (!confirm('¿Estás seguro de limpiar todo el carrito? 💔')) {
                 return;
             }
             
@@ -716,19 +714,19 @@
             .then(data => {
                 if (data.success) {
                     actualizarInterfaz(data);
-                    mostrarAlerta('🗑️ ' + data.message, 'info');
+                    mostrarAlerta(data.message, 'info');
                 } else {
                     mostrarAlerta('❌ ' + data.message, 'warning');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('💥 Error:', error);
                 mostrarAlerta('❌ Error al limpiar carrito', 'danger');
             });
         }
 
         function finalizarVenta() {
-            if (!confirm('¿Finalizar venta y generar ticket?')) {
+            if (!confirm('¿Finalizar venta y generar ticket? 🎉')) {
                 return;
             }
             
@@ -741,18 +739,18 @@
                     mostrarResumenVenta(data.resumen);
                     actualizarInterfaz(data);
                     modalVentaExitosa.show();
-                    mostrarAlerta('✅ ' + data.message, 'success');
+                    mostrarAlerta(data.message, 'success');
                 } else {
                     mostrarAlerta('❌ ' + data.message, 'danger');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('💥 Error:', error);
                 mostrarAlerta('❌ Error al finalizar venta', 'danger');
             });
         }
 
-        // ========== FUNCIONES AUXILIARES ==========
+        // ========== FUNCIONES DE UTILIDAD ==========
 
         function mostrarAlerta(mensaje, tipo) {
             const alertContainer = document.getElementById('alertContainer');
@@ -779,7 +777,7 @@
             const contenido = `
                 <div class="text-center mb-3">
                     <i class="bi bi-check-circle-fill text-success display-4"></i>
-                    <h4 class="mt-2 text-success">Venta Completada</h4>
+                    <h4 class="mt-2 text-success">🎉 Venta Completada</h4>
                 </div>
                 <div class="border rounded p-3 bg-light">
                     <p><strong>ID Venta:</strong> #${resumen.id_venta}</p>
@@ -794,7 +792,6 @@
             document.getElementById('resumenVenta').innerHTML = contenido;
         }
 
-        // Funciones de filtrado (mantener las originales)
         function filtrarProductos(query) {
             const productos = document.querySelectorAll('#gridProductos .col-xl-3');
             let visibleCount = 0;
@@ -833,12 +830,16 @@
         }
 
         function imprimirTicket() {
-            alert('Función de impresión activada. En un sistema real, esto imprimiría el ticket.');
+            alert('🎟️ Función de impresión - En desarrollo con amor 💝');
         }
 
-        // Funciones de edición (placeholder)
         function editarProducto(index) {
-            alert('Función de edición de producto - En desarrollo');
+            alert('✏️ Función de edición - Próximamente con más amor 💖');
+        }
+
+        // Función especial de amor
+        function enviarAmor() {
+            mostrarAlerta('💝 ¡Te amo! POCOPAN funciona con amor', 'love');
         }
     </script>
 </body>
