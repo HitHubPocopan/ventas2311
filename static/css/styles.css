@@ -1,0 +1,40 @@
+/* Colores clave de la estética de PocoPan */
+:root {
+    --pocopan-red: #d9534f; /* Color principal de las tarjetas de venta */
+    --pocopan-orange: #ff5733; /* Color de fondo del header */
+    --pocopan-green: #5cb85c; /* Color de ingresos */
+}
+
+/* Fondo para el header y el encabezado del sidebar */
+.pocopan-bg-primary {
+    background-color: var(--pocopan-orange) !important;
+}
+
+/* Estilo para las tarjetas de Ventas */
+.pocopan-card-ventas {
+    border-left-color: var(--pocopan-red) !important;
+}
+
+/* Estilo para las tarjetas de Ingresos */
+.pocopan-card-ingresos {
+    border-left-color: var(--pocopan-green) !important;
+}
+
+/* Ajustes del sidebar para un mejor aspecto */
+#sidebar-wrapper {
+    min-height: 100vh;
+    margin-left: -15rem;
+    transition: margin .25s ease-out;
+}
+
+#sidebar-wrapper .list-group {
+    width: 15rem;
+}
+
+#page-content-wrapper {
+    min-width: 100vw;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+    margin-left: 0;
+}

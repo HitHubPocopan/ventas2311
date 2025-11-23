@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POCOPAN - {% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+<div class="d-flex" id="wrapper">
+    <div class="bg-light border-end" id="sidebar-wrapper">
+        <div class="sidebar-heading p-3 text-white pocopan-bg-primary">POCOPAN - Administrador</div>
+        <div class="list-group list-group-flush">
+            <a class="list-group-item list-group-item-action p-3" href="{{ url_for('dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+            <a class="list-group-item list-group-item-action p-3" href="#"><i class="bi bi-people me-2"></i>Usuarios</a>
+            <a class="list-group-item list-group-item-action p-3" href="#"><i class="bi bi-box-seam me-2"></i>Productos</a>
+            <a class="list-group-item list-group-item-action p-3" href="#"><i class="bi bi-receipt me-2"></i>Ventas</a>
+            <a class="list-group-item list-group-item-action p-3" href="{{ url_for('index') }}"><i class="bi bi-cart me-2"></i>Punto de Venta</a>
+        </div>
+    </div>
+    
+    <div id="page-content-wrapper">
+        <nav class="navbar navbar-expand-lg border-bottom pocopan-bg-primary text-white">
+            <div class="container-fluid">
+                <button class="btn btn-outline-light" id="sidebarToggle"><i class="bi bi-list"></i></button>
+                <div class="navbar-nav ms-auto">
+                    <span class="nav-item nav-link text-white">{{ sistema.config['empresa'] }} Multi-Terminal</span>
+                </div>
+            </div>
+        </nav>
+        
+        <div class="container-fluid p-4">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Script básico para colapsar/expandir el sidebar
+    document.getElementById("sidebarToggle").onclick = function() {
+        document.getElementById("wrapper").classList.toggle("toggled");
+    };
+</script>
+</body>
+</html>

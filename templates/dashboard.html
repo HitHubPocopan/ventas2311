@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard General{% endblock %}
+
+{% block content %}
+<h1 class="mt-4"><i class="bi bi-speedometer2 me-2"></i>Dashboard General</h1>
+
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-start border-danger border-5 shadow h-100 py-2 pocopan-card-ventas">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col me-2">
+                        <div class="text-xs fw-bold text-uppercase mb-1">Ventas Totales</div>
+                        <div class="h5 mb-0 fw-bold">{{ stats.ventas_totales }}</div>
+                        <div class="text-xs mt-1">Hoy: {{ stats.ventas_hoy_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cash-stack fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-start border-success border-5 shadow h-100 py-2 pocopan-card-ingresos">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col me-2">
+                        <div class="text-xs fw-bold text-uppercase mb-1">Ingresos Totales</div>
+                        <div class="h5 mb-0 fw-bold">{{ stats.ingresos_totales }}</div>
+                        <div class="text-xs mt-1">Promedio: $0.00 (Simulado)</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-currency-dollar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    </div>
+
+{% endblock %}

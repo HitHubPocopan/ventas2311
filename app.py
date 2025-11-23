@@ -476,7 +476,15 @@ def finalizar_venta():
             'success': False,
             'message': result
         }), 400
-
+@app.route('/dashboard')
+def dashboard():
+    # Para el Dashboard General (Admin), no pasamos ID_Terminal
+    stats = sistema.obtener_estadisticas_dashboard(terminal_id=None)
+    
+    return render_template('dashboard.html', 
+                           stats=stats,
+                           empresa=sistema.config['empresa'])
+    
 @app.route('/cargar-catalogo', methods=['POST'])
 def cargar_catalogo():
     # Sin cambios significativos
