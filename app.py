@@ -9,11 +9,11 @@ import io
 
 # --- CONFIGURACIÓN BASE ---
 app = Flask(__name__)
+# Usar clave segura en producción
 app.secret_key = os.environ.get('SECRET_KEY', 'pocopan_secret_key_2024') 
 
 class Config:
-    # RUTAS CORREGIDAS: Quitamos el prefijo 'data/' para buscar en la raíz.
-    # Si los subes, deben estar en la raíz de tu repo (junto a app.py).
+    # Rutas corregidas a la raíz del proyecto para Vercel
     ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
     ARCHIVO_VENTAS = 'ventas.xlsx' 
     ARCHIVO_CONFIG = 'config.json'
@@ -31,6 +31,7 @@ class SistemaPocopan:
         self.catalogo_cargado = False
         self.productos_disponibles = []
         
+        # Carga tolerante a fallos
         self.cargar_config()
         self.cargar_contadores()
         self.cargar_ventas()
@@ -38,39 +39,27 @@ class SistemaPocopan:
     
     def cargar_config(self):
         config_default = {
-            "iva": 21.0,
-            "moneda": "$",
-            "empresa": "POCOPAN",
-            "backup_automatico": False, 
-            "mostrar_estadisticas_inicio": True
+            "iva": 21.0, "moneda": "$", "empresa": "POCOPAN",
+            "backup_automatico": False, "mostrar_estadisticas_inicio": True
         }
         try:
-            # Busca en la raíz, donde Vercel puede leer
             if os.path.exists(app.config['ARCHIVO_CONFIG']):
                 with open(app.config['ARCHIVO_CONFIG'], 'r', encoding='utf-8') as f:
                     self.config = json.load(f)
             else:
-                # Si no existe, usa los valores por defecto sin intentar escribirlo.
                 self.config = config_default
         except Exception as e:
-            # Si el archivo existe pero está corrupto, usa valores por defecto.
             print(f"Error cargando config (usando default): {e}")
             self.config = config_default
 
     def cargar_contadores(self):
-        contadores_default = {
-            "ultimo_cliente": 0,
-            "ultima_venta": 0,
-            "total_ventas": 0
-        }
+        contadores_default = {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0}
         try:
-            # Busca en la raíz
             if os.path.exists(app.config['ARCHIVO_CONTADORES']):
                 with open(app.config['ARCHIVO_CONTADORES'], 'r', encoding='utf-8') as f:
                     contadores = json.load(f)
                     self.contador_clientes = contadores.get("ultimo_cliente", 0) + 1
             else:
-                # Si no existe, inicia el contador desde 1.
                 self.contador_clientes = 1
         except Exception as e:
             print(f"Error cargando contadores (usando default): {e}")
@@ -78,17 +67,14 @@ class SistemaPocopan:
 
     def cargar_ventas(self):
         try:
-            # Busca en la raíz (usando 'ventas.xlsx' o el nombre que uses)
             if os.path.exists(app.config['ARCHIVO_VENTAS']):
                 self.df_ventas = pd.read_excel(app.config['ARCHIVO_VENTAS'])
-                # Lógica de comprobación de columnas...
                 columnas_requeridas = ['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
                                        'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal']
                 for col in columnas_requeridas:
                     if col not in self.df_ventas.columns:
                         self.df_ventas[col] = ''
             else:
-                # Crea un DataFrame vacío si no encuentra el archivo
                 self.df_ventas = pd.DataFrame(columns=['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
                                                        'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal'])
         except Exception as e:
@@ -103,7 +89,6 @@ class SistemaPocopan:
                 success, message = self.cargar_catalogo(archivo)
                 if success:
                     return
-        # Si no encontró ninguno, self.df_catalogo sigue siendo None
         print("ADVERTENCIA: No se encontró ningún archivo de catálogo válido.")
 
     def cargar_catalogo(self, archivo_path):
@@ -111,11 +96,27 @@ class SistemaPocopan:
             self.df_catalogo = pd.read_excel(archivo_path, sheet_name=0)
             self.df_catalogo.columns = [col.strip() for col in self.df_catalogo.columns]
             
-            columnas_requeridas = ['Nombre', 'Precio Venta', 'Estado', 'Proveedor', 'Categoría']
-            for col in columnas_requeridas:
+            # --- CORRECCIÓN CRÍTICA DE COLUMNAS ---
+            rename_map = {}
+            
+            # 1. Renombrar "Categoria" (la tuya) a "Categoría" (la que espera el POS)
+            if 'Categoria' in self.df_catalogo.columns:
+                rename_map['Categoria'] = 'Categoría'
+            
+            # 2. Renombrar "SubCAT" a "Subcategoría" (para claridad en el dashboard)
+            if 'SubCAT' in self.df_catalogo.columns:
+                rename_map['SubCAT'] = 'Subcategoría'
+            
+            if rename_map:
+                self.df_catalogo.rename(columns=rename_map, inplace=True)
+            
+            # 3. Asegurar columnas clave del POS (Proveedor y Estado no están en tu lista)
+            columnas_requeridas_pos = ['Nombre', 'Precio Venta', 'Categoría', 'Proveedor', 'Estado', 'Subcategoría']
+            for col in columnas_requeridas_pos:
                 if col not in self.df_catalogo.columns:
                     self.df_catalogo[col] = ''
-            
+            # --- FIN CORRECCIÓN DE COLUMNAS ---
+
             if 'Precio Venta' in self.df_catalogo.columns:
                 self.df_catalogo['Precio Venta'] = pd.to_numeric(self.df_catalogo['Precio Venta'], errors='coerce').fillna(0)
             
@@ -133,11 +134,10 @@ class SistemaPocopan:
             self.productos_disponibles = []
             return False, f"Error cargando catálogo {archivo_path}: {str(e)}"
     
-    # ... (El resto de los métodos del carrito, guardar, y dashboard son los mismos de la versión anterior) ...
-    # Se incluye la versión completa a continuación:
+    # --- Métodos del Sistema y POS (sin cambios en la lógica) ---
 
     def buscar_productos(self, query):
-        if not self.catalogo_cargado or not query:
+        if not self.catalogo_cargado or not query or self.df_catalogo is None:
             return []
         productos_filtrados = [
             producto for producto in self.productos_disponibles 
@@ -156,7 +156,7 @@ class SistemaPocopan:
                 'nombre': producto_nombre,
                 'precio': producto.get('Precio Venta', 0),
                 'proveedor': producto.get('Proveedor', ''),
-                'categoria': producto.get('Categoría', ''),
+                'categoria': producto.get('Categoría', ''), # Usa 'Categoría' (renombrada)
                 'estado': producto.get('Estado', 'Disponible')
             }
         return None
@@ -262,11 +262,9 @@ class SistemaPocopan:
             return False, f"Error al guardar la venta: {str(e)}"
     
     def guardar_ventas(self):
-        # Desactivado para Vercel
         return True
     
     def guardar_contadores(self):
-        # Desactivado para Vercel
         return True
 
     def obtener_estadisticas_dashboard(self, terminal_id=None):
@@ -318,19 +316,13 @@ except Exception as e:
     print(f"ERROR CRÍTICO AL INICIAR SISTEMA: {e}")
     sistema = None 
 
-# --- FUNCIONES AUXILIARES Y RUTAS ---
+# --- RUTAS DE LA APLICACIÓN ---
 
 def get_carrito():
     if 'carrito' not in session:
         session['carrito'] = []
     return session['carrito']
 
-def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# RUTA DE DIAGNÓSTICO
 @app.route('/diagnostico')
 def diagnostico():
     if sistema is None:
@@ -461,11 +453,8 @@ def finalizar_venta():
 
 @app.route('/cargar-catalogo', methods=['POST'])
 def cargar_catalogo():
-    # Esta ruta no funcionará en Vercel.
     return jsonify({'success': False, 'message': 'La carga de catálogo por archivo no es soportada en el entorno web Serverless.'}), 400
 
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
-    
