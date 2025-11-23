@@ -158,6 +158,64 @@ class SistemaPocopan:
             self.productos_disponibles = []
             return False, f"Error cargando catálogo: {str(e)}"
     
+    def obtener_detalles_producto(self, producto_nombre):
+        """Obtiene detalles de producto con validación - VERSIÓN CORREGIDA"""
+        if not self.catalogo_cargado or not producto_nombre or self.df_catalogo is None:
+            print(f"❌ No se puede buscar: catalogo_cargado={self.catalogo_cargado}, producto={producto_nombre}")
+            return None
+        
+        try:
+            print(f"🔍 Buscando producto: '{producto_nombre}'")
+            print(f"📊 Total productos en catálogo: {len(self.df_catalogo)}")
+            
+            # Método 1: Búsqueda exacta
+            producto_exacto = self.df_catalogo[self.df_catalogo['Nombre'] == producto_nombre]
+            
+            if not producto_exacto.empty:
+                producto = producto_exacto.iloc[0]
+                print(f"✅ Producto encontrado (exacto): {producto_nombre}")
+            else:
+                # Método 2: Búsqueda insensible a mayúsculas y espacios
+                producto_insensitive = self.df_catalogo[
+                    self.df_catalogo['Nombre'].str.strip().str.lower() == producto_nombre.strip().lower()
+                ]
+                
+                if not producto_insensitive.empty:
+                    producto = producto_insensitive.iloc[0]
+                    print(f"✅ Producto encontrado (insensitive): {producto_nombre}")
+                else:
+                    # Método 3: Búsqueda parcial
+                    producto_parcial = self.df_catalogo[
+                        self.df_catalogo['Nombre'].str.contains(producto_nombre, case=False, na=False)
+                    ]
+                    
+                    if not producto_parcial.empty:
+                        producto = producto_parcial.iloc[0]
+                        print(f"✅ Producto encontrado (parcial): {producto_nombre} -> {producto['Nombre']}")
+                    else:
+                        print(f"❌ Producto NO encontrado: '{producto_nombre}'")
+                        print(f"📝 Primeros 5 productos disponibles: {list(self.productos_disponibles[:5])}")
+                        return None
+            
+            # Preparar respuesta
+            detalles = {
+                'nombre': producto.get('Nombre', producto_nombre),
+                'precio': float(producto.get('Precio Venta', 0)),
+                'proveedor': producto.get('Proveedor', ''),
+                'categoria': producto.get('Categoría', ''),
+                'estado': producto.get('Estado', 'Disponible'),
+                'subcategoria': producto.get('Subcategoría', '')
+            }
+            
+            print(f"📦 Detalles obtenidos: {detalles}")
+            return detalles
+            
+        except Exception as e:
+            print(f"💥 Error crítico en obtener_detalles_producto: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+
     def buscar_productos(self, query, limit=10):
         """Búsqueda segura de productos"""
         if not self.catalogo_cargado or not query or self.df_catalogo is None:
@@ -175,27 +233,6 @@ class SistemaPocopan:
             return productos_filtrados
         except Exception:
             return []
-
-    def obtener_detalles_producto(self, producto_nombre):
-        """Obtiene detalles de producto con validación"""
-        if not self.catalogo_cargado or not producto_nombre or self.df_catalogo is None:
-            return None
-        
-        try:
-            producto = self.df_catalogo[self.df_catalogo['Nombre'] == producto_nombre]
-            if not producto.empty:
-                producto = producto.iloc[0]
-                return {
-                    'nombre': producto_nombre,
-                    'precio': float(producto.get('Precio Venta', 0)),
-                    'proveedor': producto.get('Proveedor', ''),
-                    'categoria': producto.get('Categoría', ''),
-                    'estado': producto.get('Estado', 'Disponible'),
-                    'subcategoria': producto.get('Subcategoría', '')
-                }
-        except Exception:
-            pass
-        return None
 
     def validar_carrito(self, carrito_actual):
         """Valida que el carrito no exceda límites"""
@@ -501,23 +538,26 @@ def buscar_productos_route():
     productos = sistema.buscar_productos(query)
     return jsonify(productos)
 
-@app.route('/detalles-producto/<producto_nombre>')
+@app.route('/detalles-producto/<path:producto_nombre>')
 def detalles_producto(producto_nombre):
-    """API para detalles de producto"""
+    """API para detalles de producto - VERSIÓN CORREGIDA"""
     if sistema is None:
         return jsonify({'error': 'Sistema no disponible'}), 500
         
+    print(f"🌐 API llamada para producto: '{producto_nombre}'")
+    
     detalles = sistema.obtener_detalles_producto(producto_nombre)
     if detalles:
         return jsonify(detalles)
     else:
-        return jsonify({'error': 'Producto no encontrado'}), 404
+        print(f"❌ API: Producto no encontrado - '{producto_nombre}'")
+        return jsonify({'error': f'Producto no encontrado: {producto_nombre}'}), 404
 
 # --- APIs del Carrito ---
 
 @app.route('/agregar-carrito', methods=['POST'])
 def agregar_carrito():
-    """API para agregar producto al carrito"""
+    """API para agregar producto al carrito - VERSIÓN CORREGIDA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
@@ -525,6 +565,8 @@ def agregar_carrito():
         data = request.get_json()
         producto = data.get('producto', '').strip()
         cantidad = data.get('cantidad', 1)
+        
+        print(f"🛒 Agregando al carrito: '{producto}', cantidad: {cantidad}")
         
         if not producto:
             return jsonify({'success': False, 'message': 'Producto requerido'}), 400
@@ -544,6 +586,7 @@ def agregar_carrito():
             return jsonify({'success': False, 'message': message}), 400
             
     except Exception as e:
+        print(f"💥 Error en agregar-carrito: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/eliminar-carrito/<int:index>', methods=['DELETE'])
@@ -625,3 +668,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
+    
