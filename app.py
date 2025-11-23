@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import json
 import os
 from werkzeug.utils import secure_filename
@@ -13,24 +13,24 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'pocopan_secret_key_2024') 
 
 class Config:
-    # Directorios
+    # Directorios - MANTENIDOS SOLO COMO CONSTANTES, NO SE CREAN AL INICIO
     UPLOAD_FOLDER = 'data'
+    ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
     ARCHIVO_VENTAS = 'data/ventas.xlsx'
     ARCHIVO_CONFIG = 'data/config.json'
     ARCHIVO_CONTADORES = 'data/contadores.json'
+    ARCHIVO_BACKUP = 'data/backup_ventas/' # Directorio no persistente
     
     # Nuevo: Identificación de esta instancia de la App (Esta es la TERMINAL)
     ID_TERMINAL_ACTUAL = os.environ.get('TERMINAL_ID', 'TERMINAL_1') 
 
 app.config.from_object(Config)
 
-# Crear directorios si no existen
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# LAS LLAMADAS A os.makedirs HAN SIDO ELIMINADAS AQUÍ PARA EVITAR EL ERROR 500 DE VERCEL
 
 # --- CLASE PRINCIPAL ---
-class SistemaPocopan:   
+class SistemaPocopan:
     def __init__(self):
-        # El carrito ya NO es parte de la clase, se gestiona por 'session'
         self.contador_clientes = 1
         self.df_catalogo = None
         self.catalogo_cargado = False
@@ -41,50 +41,52 @@ class SistemaPocopan:
         self.cargar_ventas()
         self.cargar_catalogo_automatico()
     
-        
     def cargar_config(self):
-        # ... (Carga de configuración sin cambios)
         config_default = {
-            "iva": 0.0,
+            "iva": 21.0,
             "moneda": "$",
             "empresa": "POCOPAN",
-            "backup_automatico": True,
+            "backup_automatico": False, # Desactivado por defecto para serverless
             "mostrar_estadisticas_inicio": True
         }
         try:
+            # Vercel puede leer archivos que existen en el repositorio
             if os.path.exists(app.config['ARCHIVO_CONFIG']):
                 with open(app.config['ARCHIVO_CONFIG'], 'r', encoding='utf-8') as f:
                     self.config = json.load(f)
             else:
                 self.config = config_default
-                with open(app.config['ARCHIVO_CONFIG'], 'w', encoding='utf-8') as f:
-                    json.dump(self.config, f, indent=4, ensure_ascii=False)
+                # NO INTENTAMOS CREAR EL ARCHIVO EN VERCEL
+                # with open(app.config['ARCHIVO_CONFIG'], 'w', encoding='utf-8') as f:
+                #     json.dump(self.config, f, indent=4, ensure_ascii=False)
         except Exception as e:
             print(f"Error cargando config: {e}")
             self.config = config_default
 
     def cargar_contadores(self):
-        # ... (Carga de contadores sin cambios)
         contadores_default = {
             "ultimo_cliente": 0,
             "ultima_venta": 0,
             "total_ventas": 0
         }
         try:
+            # Vercel puede leer archivos que existen en el repositorio
             if os.path.exists(app.config['ARCHIVO_CONTADORES']):
                 with open(app.config['ARCHIVO_CONTADORES'], 'r', encoding='utf-8') as f:
                     contadores = json.load(f)
                     self.contador_clientes = contadores.get("ultimo_cliente", 0) + 1
             else:
                 self.contador_clientes = 1
-                with open(app.config['ARCHIVO_CONTADORES'], 'w', encoding='utf-8') as f:
-                    json.dump(contadores_default, f, indent=4, ensure_ascii=False)
+                # NO INTENTAMOS CREAR EL ARCHIVO EN VERCEL
+                # with open(app.config['ARCHIVO_CONTADORES'], 'w', encoding='utf-8') as f:
+                #     json.dump(contadores_default, f, indent=4, ensure_ascii=False)
         except Exception as e:
             print(f"Error cargando contadores: {e}")
             self.contador_clientes = 1
 
     def cargar_ventas(self):
         try:
+            # Vercel puede leer archivos que existen en el repositorio
             if os.path.exists(app.config['ARCHIVO_VENTAS']):
                 self.df_ventas = pd.read_excel(app.config['ARCHIVO_VENTAS'])
                 print(f"Cargadas {len(self.df_ventas)} ventas existentes")
@@ -108,18 +110,17 @@ class SistemaPocopan:
                 ])
         except Exception as e:
             print(f"Error cargando ventas: {e}")
-            # Asegurar que el DataFrame se cree incluso con error
             self.df_ventas = pd.DataFrame(columns=[
                 'ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
                 'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 
                 'ID_Terminal'
             ])
     
-    # Métodos cargar_catalogo_automatico, cargar_catalogo, buscar_productos, obtener_detalles_producto (sin cambios)
     def cargar_catalogo_automatico(self):
         archivos_posibles = ["Pocopan (1).xlsx", "Pocopan.xlsx", "catalogo.xlsx"]
         for archivo in archivos_posibles:
-            if os.path.exists(archivo):
+            # Búsqueda en la raíz del proyecto subida a Vercel
+            if os.path.exists(archivo): 
                 self.cargar_catalogo(archivo)
                 return
         print("No se encontró archivo de catálogo automáticamente")
@@ -150,6 +151,7 @@ class SistemaPocopan:
         except Exception as e:
             return False, f"Error cargando catálogo: {str(e)}"
     
+    # ... (métodos de búsqueda y detalles sin cambios) ...
     def buscar_productos(self, query):
         if not self.catalogo_cargado or not query:
             return []
@@ -175,38 +177,32 @@ class SistemaPocopan:
             }
         return None
 
-    # MODIFICADO: Ahora recibe el carrito de la sesión
+    # Métodos del Carrito (modificados para usar session)
     def agregar_al_carrito(self, carrito_actual, producto_nombre, cantidad):
         detalles = self.obtener_detalles_producto(producto_nombre)
         if not detalles:
             return False, "Producto no encontrado", carrito_actual
-        
         try:
             cantidad = int(cantidad)
             if cantidad <= 0:
                 return False, "La cantidad debe ser mayor a 0", carrito_actual
         except ValueError:
             return False, "Cantidad inválida", carrito_actual
-        
         precio = float(detalles['precio'])
         if precio <= 0:
             return False, "El producto no tiene precio válido", carrito_actual
-        
-        subtotal = cantidad * precio
         
         item = {
             'producto': producto_nombre,
             'cantidad': cantidad,
             'precio': precio,
-            'subtotal': subtotal,
+            'subtotal': cantidad * precio,
             'proveedor': detalles['proveedor'],
             'categoria': detalles['categoria']
         }
-        
         carrito_actual.append(item)
         return True, "Producto agregado al carrito", carrito_actual
     
-    # MODIFICADO: Ahora recibe el carrito de la sesión
     def eliminar_del_carrito(self, carrito_actual, index):
         try:
             index = int(index)
@@ -218,30 +214,27 @@ class SistemaPocopan:
         except ValueError:
             return False, "Índice inválido", carrito_actual
     
-    # MODIFICADO: Ahora recibe el carrito de la sesión
     def limpiar_carrito(self, carrito_actual):
         carrito_actual.clear()
         return True, "Carrito limpiado", carrito_actual
     
-    # MODIFICADO: Ahora recibe el carrito de la sesión
     def calcular_totales(self, carrito_actual):
         subtotal = sum(item['subtotal'] for item in carrito_actual)
         iva = subtotal * (self.config.get('iva', 21) / 100)
         total = subtotal + iva
-        
         return {
             'subtotal': subtotal,
             'iva': iva,
             'total': total,
             'porcentaje_iva': self.config.get('iva', 21)
         }
-    
-    # MODIFICADO: Ahora recibe el carrito de la sesión
+
     def finalizar_venta(self, carrito_actual):
         if not carrito_actual:
             return False, "El carrito está vacío"
         
         try:
+            # Esta venta se registrará en self.df_ventas (MEMORIA) pero NO SE GUARDARÁ EN DISCO.
             id_cliente = self.contador_clientes
             fecha = date.today().strftime("%Y-%m-%d")
             hora = datetime.now().strftime("%H:%M:%S")
@@ -263,19 +256,18 @@ class SistemaPocopan:
                     'Precio_Unitario': item['precio'],
                     'Total_Venta': item['subtotal'],
                     'Vendedor': 'Sistema Web',
-                    'ID_Terminal': app.config['ID_TERMINAL_ACTUAL'] # <--- CLAVE MULTI-TERMINAL
+                    'ID_Terminal': app.config['ID_TERMINAL_ACTUAL'] # CLAVE MULTI-TERMINAL
                 }
                 nuevas_ventas.append(nueva_venta)
             
             nuevas_ventas_df = pd.DataFrame(nuevas_ventas)
             self.df_ventas = pd.concat([self.df_ventas, nuevas_ventas_df], ignore_index=True)
             
+            # LAS FUNCIONES DE GUARDADO ESTÁN COMENTADAS/DESACTIVADAS PARA VERCEL
             self.guardar_ventas()
             self.guardar_contadores()
             
             totales = self.calcular_totales(carrito_actual)
-            
-            # El carrito se limpia en la ruta después de que la función retorna True
             self.contador_clientes += 1
             
             return True, {
@@ -288,70 +280,55 @@ class SistemaPocopan:
         except Exception as e:
             return False, f"Error al guardar la venta: {str(e)}"
     
-    # Métodos guardar_ventas y guardar_contadores (sin cambios)
+    # --- FUNCIONES DE PERSISTENCIA COMENTADAS PARA VERCEL ---
     def guardar_ventas(self):
-        try:
-            self.df_ventas.to_excel(app.config['ARCHIVO_VENTAS'], index=False)
-            return True
-        except Exception as e:
-            print(f"Error guardando ventas: {e}")
-            return False
+        # La persistencia no es posible en el entorno serverless de Vercel (read-only)
+        # self.df_ventas.to_excel(app.config['ARCHIVO_VENTAS'], index=False)
+        return True
     
     def guardar_contadores(self):
-        try:
-            contadores = {
-                "ultimo_cliente": self.contador_clientes,
-                "ultima_venta": self.df_ventas['ID_Venta'].max() if not self.df_ventas.empty else 0,
-                "total_ventas": len(self.df_ventas)
-            }
-            with open(app.config['ARCHIVO_CONTADORES'], 'w', encoding='utf-8') as f:
-                json.dump(contadores, f, indent=4, ensure_ascii=False)
-            return True
-        except Exception as e:
-            print(f"Error guardando contadores: {e}")
-            return False
-    
-    # Dentro de la clase SistemaPocopan:
+        # La persistencia no es posible en el entorno serverless de Vercel (read-only)
+        # con open(app.config['ARCHIVO_CONTADORES'], 'w', encoding='utf-8') as f:
+        #     json.dump(contadores, f, indent=4, ensure_ascii=False)
+        return True
 
-def obtener_estadisticas_dashboard(self, terminal_id=None):
-    # Asegurar que los datos numéricos sean float, ignorando errores
-    ventas = self.df_ventas.copy()
-    ventas['Total_Venta'] = pd.to_numeric(ventas['Total_Venta'], errors='coerce').fillna(0)
-    
-    # 1. Filtro por Terminal (si terminal_id es None, se usa todo el DataFrame)
-    if terminal_id:
-        ventas_filtradas = ventas[ventas['ID_Terminal'] == terminal_id]
-        terminal_nombre = terminal_id # Aquí deberías mapear ID a Nombre
-    else:
-        ventas_filtradas = ventas
-        terminal_nombre = "General" # Para el Dashboard Administrador
+    # --- LÓGICA DE DASHBOARD (Añadida) ---
+    def obtener_estadisticas_dashboard(self, terminal_id=None):
+        ventas = self.df_ventas.copy()
+        ventas['Total_Venta'] = pd.to_numeric(ventas['Total_Venta'], errors='coerce').fillna(0)
         
-    # 2. Cálculos
-    ventas_hoy = ventas_filtradas[
-        ventas_filtradas['Fecha'] == date.today().strftime("%Y-%m-%d")
-    ]
-    
-    total_ventas = len(ventas_filtradas.drop_duplicates(subset=['ID_Venta']))
-    ingresos_totales = ventas_filtradas['Total_Venta'].sum()
-    ventas_hoy_count = len(ventas_hoy.drop_duplicates(subset=['ID_Venta']))
-    
-    # 3. Productos y Usuarios
-    productos_disponibles = len(self.df_catalogo) if self.df_catalogo is not None else 0
-    # Nota: El cálculo de usuarios es una simulación ya que no hay DB de usuarios.
-    usuarios_activos = 4 # SIMULADO. Debería venir de una base de datos.
-    
-    return {
-        'ventas_totales': total_ventas,
-        'ingresos_totales': f"{self.config['moneda']}{ingresos_totales:,.2f}",
-        'productos_catalogo': productos_disponibles,
-        'usuarios_activos': usuarios_activos,
-        'ventas_hoy_count': ventas_hoy_count,
-        'dashboard_nombre': f"Dashboard - Pocopan {terminal_nombre}"
-    }
+        # 1. Filtro por Terminal
+        if terminal_id:
+            ventas_filtradas = ventas[ventas['ID_Terminal'] == terminal_id]
+            terminal_nombre = terminal_id 
+        else:
+            ventas_filtradas = ventas
+            terminal_nombre = "General" 
+            
+        # 2. Cálculos
+        ventas_hoy = ventas_filtradas[
+            ventas_filtradas['Fecha'] == date.today().strftime("%Y-%m-%d")
+        ]
+        
+        total_ventas = len(ventas_filtradas.drop_duplicates(subset=['ID_Venta']))
+        # El total incluye solo el Total_Venta (subtotal), faltaría calcular el IVA total
+        ingresos_totales = ventas_filtradas['Total_Venta'].sum() 
+        ventas_hoy_count = len(ventas_hoy.drop_duplicates(subset=['ID_Venta']))
+        
+        productos_disponibles = len(self.df_catalogo) if self.df_catalogo is not None else 0
+        usuarios_activos = 4 # SIMULADO. Debería venir de una base de datos.
+        
+        return {
+            'ventas_totales': total_ventas,
+            'ingresos_totales': f"{self.config['moneda']}{ingresos_totales:,.2f}",
+            'productos_catalogo': productos_disponibles,
+            'usuarios_activos': usuarios_activos,
+            'ventas_hoy_count': ventas_hoy_count,
+            'dashboard_nombre': f"Dashboard - Pocopan {terminal_nombre}"
+        }
 
-# Y asegúrate de que el método 'cargar_ventas' incluya 'ID_Terminal' como se corrigió antes.
 
-# Instancia global del sistema (los datos del catálogo y ventas son comunes a todas las terminales)
+# Instancia global del sistema
 sistema = SistemaPocopan()
 
 # --- FUNCIONES AUXILIARES ---
@@ -368,28 +345,42 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # --- RUTAS DE LA APLICACIÓN ---
+
+# Ruta principal: El Punto de Venta (POS)
 @app.route('/')
 def index():
     # Obtener el carrito de la sesión
     carrito_actual = get_carrito()
     totales = sistema.calcular_totales(carrito_actual)
     
-    return render_template('index.html', 
+    # Asume que tienes un template 'pos.html' para la interfaz de venta
+    return render_template('pos.html', 
                            sistema=sistema,
-                           carrito=carrito_actual, # Pasa el carrito de la sesión al template
+                           carrito=carrito_actual, 
                            totales=totales,
                            id_cliente_actual=f"CLIENTE-{sistema.contador_clientes:04d}")
 
+# Nueva Ruta: El Dashboard General (Admin)
+@app.route('/dashboard')
+def dashboard():
+    # Obtiene estadísticas generales (terminal_id=None)
+    stats = sistema.obtener_estadisticas_dashboard(terminal_id=None)
+    
+    return render_template('dashboard.html', 
+                           stats=stats,
+                           empresa=sistema.config['empresa'],
+                           sistema=sistema) # Pasar sistema para acceder a config/empresa en base.html
+
+
+# Rutas AJAX (Agregar/Eliminar/Finalizar)
 @app.route('/buscar-productos')
 def buscar_productos():
-    # Sin cambios, solo usa el método de la clase
     query = request.args.get('q', '')
     productos = sistema.buscar_productos(query)
     return jsonify(productos)
 
 @app.route('/detalles-producto/<producto_nombre>')
 def detalles_producto(producto_nombre):
-    # Sin cambios
     detalles = sistema.obtener_detalles_producto(producto_nombre)
     if detalles:
         return jsonify(detalles)
@@ -400,10 +391,9 @@ def detalles_producto(producto_nombre):
 def agregar_carrito():
     producto = request.json.get('producto')
     cantidad = request.json.get('cantidad', 1)
-    
     carrito_actual = get_carrito()
     success, message, carrito_actual = sistema.agregar_al_carrito(carrito_actual, producto, cantidad)
-    session['carrito'] = carrito_actual # Guardar el carrito modificado en la sesión
+    session['carrito'] = carrito_actual
     
     if success:
         return jsonify({
@@ -413,16 +403,13 @@ def agregar_carrito():
             'totales': sistema.calcular_totales(carrito_actual)
         })
     else:
-        return jsonify({
-            'success': False,
-            'message': message
-        }), 400
+        return jsonify({'success': False, 'message': message}), 400
 
 @app.route('/eliminar-carrito/<int:index>', methods=['DELETE'])
 def eliminar_carrito(index):
     carrito_actual = get_carrito()
     success, message, carrito_actual = sistema.eliminar_del_carrito(carrito_actual, index)
-    session['carrito'] = carrito_actual # Guardar el carrito modificado en la sesión
+    session['carrito'] = carrito_actual
     
     if success:
         return jsonify({
@@ -432,16 +419,13 @@ def eliminar_carrito(index):
             'totales': sistema.calcular_totales(carrito_actual)
         })
     else:
-        return jsonify({
-            'success': False,
-            'message': message
-        }), 400
+        return jsonify({'success': False, 'message': message}), 400
 
 @app.route('/limpiar-carrito', methods=['DELETE'])
 def limpiar_carrito():
     carrito_actual = get_carrito()
     success, message, carrito_actual = sistema.limpiar_carrito(carrito_actual)
-    session['carrito'] = carrito_actual # Guardar el carrito limpio en la sesión
+    session['carrito'] = carrito_actual
     
     if success:
         return jsonify({
@@ -451,10 +435,7 @@ def limpiar_carrito():
             'totales': sistema.calcular_totales(carrito_actual)
         })
     else:
-        return jsonify({
-            'success': False,
-            'message': message
-        }), 400
+        return jsonify({'success': False, 'message': message}), 400
 
 @app.route('/finalizar-venta', methods=['POST'])
 def finalizar_venta():
@@ -462,9 +443,7 @@ def finalizar_venta():
     success, result = sistema.finalizar_venta(carrito_actual)
     
     if success:
-        # Limpiar el carrito de la sesión SOLO si la venta fue exitosa
         session['carrito'] = [] 
-        
         return jsonify({
             'success': True,
             'message': 'Venta finalizada exitosamente',
@@ -472,51 +451,16 @@ def finalizar_venta():
             'id_cliente_actual': f"CLIENTE-{sistema.contador_clientes:04d}"
         })
     else:
-        return jsonify({
-            'success': False,
-            'message': result
-        }), 400
-@app.route('/dashboard')
-def dashboard():
-    # Para el Dashboard General (Admin), no pasamos ID_Terminal
-    stats = sistema.obtener_estadisticas_dashboard(terminal_id=None)
-    
-    return render_template('dashboard.html', 
-                           stats=stats,
-                           empresa=sistema.config['empresa'])
-    
+        return jsonify({'success': False, 'message': result}), 400
+
 @app.route('/cargar-catalogo', methods=['POST'])
 def cargar_catalogo():
-    # Sin cambios significativos
-    if 'archivo' not in request.files:
-        return jsonify({'success': False, 'message': 'No se seleccionó archivo'}), 400
-    
-    archivo = request.files['archivo']
-    if archivo.filename == '':
-        return jsonify({'success': False, 'message': 'No se seleccionó archivo'}), 400
-    
-    if archivo and allowed_file(archivo.filename):
-        # La función allowed_file ya fue definida arriba
-        filename = secure_filename(archivo.filename)
-        # Aquí puedes decidir si quieres guardar el archivo con el nombre de la terminal:
-        # filename_terminal = f"{app.config['ID_TERMINAL_ACTUAL']}_{filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        archivo.save(filepath)
-        
-        success, message = sistema.cargar_catalogo(filepath)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': message,
-                'total_productos': len(sistema.df_catalogo),
-                'productos_disponibles': len(sistema.productos_disponibles)
-            })
-        else:
-            return jsonify({'success': False, 'message': message}), 400
-    
-    return jsonify({'success': False, 'message': 'Tipo de archivo no permitido'}), 400
+    # Esta ruta no funcionará en Vercel, ya que implica escritura en disco.
+    return jsonify({'success': False, 'message': 'La carga de catálogo por archivo no es soportada en el entorno web Serverless.'}), 400
+
 
 if __name__ == '__main__':
+    # Nota: Vercel usa la función 'app' directamente, no este bloque.
     app.run(debug=True, host='0.0.0.0', port=5000)
+    
     
