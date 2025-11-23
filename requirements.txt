@@ -1,0 +1,4 @@
+Flask
+pandas
+openpyxl  # Necesario para que pandas lea y escriba .xlsx
+numpy
