@@ -13,20 +13,16 @@
             --pocopan-success: #27ae60;
             --pocopan-danger: #e74c3c;
             --pocopan-warning: #f39c12;
-            --pocopan-love: #e84393;
         }
         
         .bg-pocopan { background-color: var(--pocopan-primary); }
         .text-pocopan { color: var(--pocopan-primary); }
         .btn-pocopan { background-color: var(--pocopan-secondary); color: white; }
         .btn-pocopan:hover { background-color: #2980b9; color: white; }
-        .btn-love { background-color: var(--pocopan-love); color: white; }
-        .btn-love:hover { background-color: #fd79a8; color: white; }
         
         .producto-item:hover { 
             background-color: #f8f9fa; 
             cursor: pointer; 
-            transform: translateY(-2px);
             transition: all 0.2s;
         }
         
@@ -36,7 +32,7 @@
         }
         
         .carrito-item:hover {
-            border-left-color: var(--pocopan-love);
+            border-left-color: var(--pocopan-success);
         }
         
         .catalogo-card {
@@ -46,9 +42,8 @@
         }
         
         .catalogo-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            border-color: var(--pocopan-love);
+            transform: translateY(-2px);
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
         }
         
         .search-highlight {
@@ -65,7 +60,7 @@
         }
         
         .sidebar {
-            background: linear-gradient(180deg, var(--pocopan-primary) 0%, #34495e 100%);
+            background-color: var(--pocopan-primary);
             color: white;
             min-height: 100vh;
         }
@@ -76,11 +71,6 @@
             min-height: 100vh;
         }
         
-        .love-badge {
-            background: linear-gradient(45deg, #e84393, #fd79a8);
-            color: white;
-        }
-        
         @media (max-width: 768px) {
             .sidebar {
                 min-height: auto;
@@ -88,19 +78,8 @@
         }
         
         .categoria-btn.active {
-            background-color: var(--pocopan-love) !important;
+            background-color: var(--pocopan-secondary) !important;
             color: white !important;
-            border-color: var(--pocopan-love) !important;
-        }
-        
-        .heart-pulse {
-            animation: heartBeat 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes heartBeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -113,8 +92,8 @@
             <!-- Sidebar Navegación -->
             <div class="col-lg-2 sidebar p-3">
                 <div class="text-center mb-4">
-                    <h4 class="fw-bold">🛍️ POCOPAN</h4>
-                    <small class="text-light">Hecho con amor 💝</small>
+                    <h4 class="fw-bold">POCOPAN</h4>
+                    <small class="text-light">Sistema de Ventas</small>
                 </div>
                 
                 <div class="d-grid gap-2 mb-4">
@@ -156,13 +135,6 @@
                         {% endif %}
                     </div>
                 </div>
-                
-                <div class="mt-auto">
-                    <div class="text-center small text-muted">
-                        <i class="bi bi-heart-fill text-danger heart-pulse"></i> Sistema Seguro<br>
-                        <small>v2.0 - Con amor</small>
-                    </div>
-                </div>
             </div>
 
             <!-- Catálogo de Productos (CENTRO) -->
@@ -178,7 +150,7 @@
                                 <i class="bi bi-box-seam"></i> 
                                 <span id="totalProductos">{{ sistema.productos_disponibles|length }}</span> productos
                             </span>
-                            <span class="badge love-badge fs-6">
+                            <span class="badge bg-secondary fs-6">
                                 <i class="bi bi-tags"></i> 
                                 <span id="totalCategorias">
                                     {% if sistema.catalogo_cargado and sistema.df_catalogo is not none %}
@@ -201,10 +173,10 @@
                                 <input type="text" 
                                        class="form-control" 
                                        id="buscarProducto" 
-                                       placeholder="Buscar producto por nombre... 💕"
+                                       placeholder="Buscar producto por nombre..."
                                        autocomplete="off">
-                                <button class="btn btn-love" type="button" id="btnBuscar">
-                                    <i class="bi bi-search-heart"></i> Buscar
+                                <button class="btn btn-pocopan" type="button" id="btnBuscar">
+                                    Buscar
                                 </button>
                             </div>
                         </div>
@@ -254,7 +226,7 @@
                             <div class="col-12 text-center py-5">
                                 <i class="bi bi-exclamation-triangle display-1 text-muted"></i>
                                 <h5 class="text-muted mt-3">Catálogo no disponible</h5>
-                                <p class="text-muted">No se pudo cargar el catálogo de productos 💔</p>
+                                <p class="text-muted">No se pudo cargar el catálogo de productos</p>
                             </div>
                         {% endif %}
                     </div>
@@ -316,7 +288,7 @@
                                     <div class="text-center py-4">
                                         <i class="bi bi-cart-x display-6 text-muted"></i>
                                         <p class="text-muted mt-2 mb-0">El carrito está vacío</p>
-                                        <small class="text-muted">Agrega productos desde el catálogo 💝</small>
+                                        <small class="text-muted">Agrega productos desde el catálogo</small>
                                     </div>
                                 {% endif %}
                             </div>
@@ -375,12 +347,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-2 text-center">
-                            <small class="text-muted">
-                                <i class="bi bi-heart-fill text-danger"></i> 
-                                Hecho con amor para POCOPAN
-                            </small>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -398,9 +364,7 @@
                 <div class="modal-body">
                     <div id="detallesProducto"></div>
                     <div class="mb-3">
-                        <label for="cantidadProducto" class="form-label">
-                            <i class="bi bi-123"></i> Cantidad:
-                        </label>
+                        <label for="cantidadProducto" class="form-label">Cantidad:</label>
                         <input type="number" class="form-control" id="cantidadProducto" value="1" min="1" max="100">
                     </div>
                 </div>
@@ -408,7 +372,7 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle"></i> Cancelar
                     </button>
-                    <button type="button" class="btn btn-love" id="btnAgregarProducto">
+                    <button type="button" class="btn btn-primary" id="btnAgregarProducto">
                         <i class="bi bi-cart-check"></i> Agregar al Carrito
                     </button>
                 </div>
@@ -439,19 +403,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Variables globales con amor 💖
         let productoSeleccionado = null;
         let modalProducto = null;
         let modalVentaExitosa = null;
 
-        // Inicialización con amor
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('💝 POCOPAN cargado con éxito');
-            
             modalProducto = new bootstrap.Modal(document.getElementById('modalProducto'));
             modalVentaExitosa = new bootstrap.Modal(document.getElementById('modalVentaExitosa'));
             
-            // Configurar búsqueda en tiempo real
             const buscarInput = document.getElementById('buscarProducto');
             if (buscarInput) {
                 buscarInput.addEventListener('input', function() {
@@ -460,7 +419,6 @@
                 });
             }
 
-            // Configurar filtros por categoría
             document.querySelectorAll('.categoria-btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     document.querySelectorAll('.categoria-btn').forEach(function(b) {
@@ -471,21 +429,13 @@
                     filtrarPorCategoria(categoria);
                 });
             });
-            
-            console.log('🎯 Sistema listo para usar');
         });
 
-        // ========== FUNCIONES PRINCIPALES CON AMOR ==========
-
         function seleccionarProducto(nombreProducto) {
-            console.log('🛍️ Producto seleccionado:', nombreProducto);
             productoSeleccionado = nombreProducto;
             
-            // Limpiar y preparar el nombre para la URL
             const nombreLimpio = nombreProducto.trim().replace(/\s+/g, ' ');
-            console.log('✨ Nombre limpio:', nombreLimpio);
             
-            // Cargar detalles del producto
             fetch('/detalles-producto/' + encodeURIComponent(nombreLimpio))
                 .then(response => {
                     if (!response.ok) {
@@ -494,16 +444,15 @@
                     return response.json();
                 })
                 .then(detalles => {
-                    console.log('📦 Detalles recibidos:', detalles);
                     if (detalles.error) {
-                        mostrarAlerta('❌ ' + detalles.error, 'danger');
+                        mostrarAlerta(detalles.error, 'danger');
                         return;
                     }
                     mostrarModalProducto(detalles);
                 })
                 .catch(error => {
-                    console.error('💥 Error:', error);
-                    mostrarAlerta('❌ Error al cargar detalles: ' + error.message, 'danger');
+                    console.error('Error:', error);
+                    mostrarAlerta('Error al cargar detalles: ' + error.message, 'danger');
                 });
         }
 
@@ -520,12 +469,11 @@
             document.getElementById('detallesProducto').innerHTML = contenido;
             document.getElementById('cantidadProducto').value = 1;
             
-            // Configurar el botón de agregar
             const btnAgregar = document.getElementById('btnAgregarProducto');
             btnAgregar.onclick = function() {
                 const cantidad = parseInt(document.getElementById('cantidadProducto').value);
                 if (isNaN(cantidad) || cantidad < 1) {
-                    mostrarAlerta('❌ La cantidad debe ser un número válido', 'warning');
+                    mostrarAlerta('La cantidad debe ser un número válido', 'warning');
                     return;
                 }
                 agregarAlCarrito(productoSeleccionado, cantidad);
@@ -535,8 +483,6 @@
         }
 
         function agregarAlCarrito(producto, cantidad) {
-            console.log('🛒 Agregando al carrito:', producto, cantidad);
-            
             const datos = {
                 producto: producto,
                 cantidad: cantidad
@@ -556,24 +502,22 @@
                 return response.json();
             })
             .then(data => {
-                console.log('✅ Respuesta:', data);
-                
                 if (data.success) {
                     actualizarInterfaz(data);
                     modalProducto.hide();
                     mostrarAlerta(data.message, 'success');
                 } else {
-                    mostrarAlerta('❌ ' + data.message, 'warning');
+                    mostrarAlerta(data.message, 'warning');
                 }
             })
             .catch(error => {
-                console.error('💥 Error:', error);
-                mostrarAlerta('❌ Error de conexión: ' + error.message, 'danger');
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión: ' + error.message, 'danger');
             });
         }
 
         function eliminarDelCarrito(index) {
-            if (!confirm('¿Estás seguro de eliminar este producto del carrito? 💔')) {
+            if (!confirm('¿Estás seguro de eliminar este producto del carrito?')) {
                 return;
             }
             
@@ -591,34 +535,30 @@
                     actualizarInterfaz(data);
                     mostrarAlerta(data.message, 'info');
                 } else {
-                    mostrarAlerta('❌ ' + data.message, 'warning');
+                    mostrarAlerta(data.message, 'warning');
                 }
             })
             .catch(error => {
-                console.error('💥 Error:', error);
-                mostrarAlerta('❌ Error al eliminar producto', 'danger');
+                console.error('Error:', error);
+                mostrarAlerta('Error al eliminar producto', 'danger');
             });
         }
 
         function actualizarInterfaz(data) {
-            // Actualizar contadores
             if (data.carrito) {
                 document.getElementById('contadorCarrito').textContent = data.carrito.length;
                 document.getElementById('statsItems').textContent = data.carrito.length;
                 document.getElementById('statsProductos').textContent = data.carrito.length;
             }
             
-            // Actualizar vista del carrito
             if (data.carrito) {
                 actualizarVistaCarrito(data.carrito);
             }
             
-            // Actualizar totales
             if (data.totales) {
                 actualizarTotales(data.totales);
             }
             
-            // Actualizar estado de botones
             const btnFinalizar = document.getElementById('btnFinalizarVenta');
             if (btnFinalizar) {
                 btnFinalizar.disabled = !data.carrito || data.carrito.length === 0;
@@ -633,7 +573,7 @@
                     <div class="text-center py-4">
                         <i class="bi bi-cart-x display-6 text-muted"></i>
                         <p class="text-muted mt-2 mb-0">El carrito está vacío</p>
-                        <small class="text-muted">Agrega productos desde el catálogo 💝</small>
+                        <small class="text-muted">Agrega productos desde el catálogo</small>
                     </div>
                 `;
                 return;
@@ -691,19 +631,18 @@
             const cantidad = parseInt(nuevaCantidad);
             
             if (isNaN(cantidad) || cantidad < 1 || cantidad > 100) {
-                mostrarAlerta('❌ La cantidad debe estar entre 1 y 100', 'warning');
+                mostrarAlerta('La cantidad debe estar entre 1 y 100', 'warning');
                 return;
             }
             
-            // Para simplicidad, recargamos la página para actualizar
-            mostrarAlerta('🔄 Actualizando cantidad...', 'info');
+            mostrarAlerta('Actualizando cantidad...', 'info');
             setTimeout(() => {
                 location.reload();
             }, 1000);
         }
 
         function limpiarCarrito() {
-            if (!confirm('¿Estás seguro de limpiar todo el carrito? 💔')) {
+            if (!confirm('¿Estás seguro de limpiar todo el carrito?')) {
                 return;
             }
             
@@ -716,17 +655,17 @@
                     actualizarInterfaz(data);
                     mostrarAlerta(data.message, 'info');
                 } else {
-                    mostrarAlerta('❌ ' + data.message, 'warning');
+                    mostrarAlerta(data.message, 'warning');
                 }
             })
             .catch(error => {
-                console.error('💥 Error:', error);
-                mostrarAlerta('❌ Error al limpiar carrito', 'danger');
+                console.error('Error:', error);
+                mostrarAlerta('Error al limpiar carrito', 'danger');
             });
         }
 
         function finalizarVenta() {
-            if (!confirm('¿Finalizar venta y generar ticket? 🎉')) {
+            if (!confirm('¿Finalizar venta y generar ticket?')) {
                 return;
             }
             
@@ -741,16 +680,14 @@
                     modalVentaExitosa.show();
                     mostrarAlerta(data.message, 'success');
                 } else {
-                    mostrarAlerta('❌ ' + data.message, 'danger');
+                    mostrarAlerta(data.message, 'danger');
                 }
             })
             .catch(error => {
-                console.error('💥 Error:', error);
-                mostrarAlerta('❌ Error al finalizar venta', 'danger');
+                console.error('Error:', error);
+                mostrarAlerta('Error al finalizar venta', 'danger');
             });
         }
-
-        // ========== FUNCIONES DE UTILIDAD ==========
 
         function mostrarAlerta(mensaje, tipo) {
             const alertContainer = document.getElementById('alertContainer');
@@ -777,7 +714,7 @@
             const contenido = `
                 <div class="text-center mb-3">
                     <i class="bi bi-check-circle-fill text-success display-4"></i>
-                    <h4 class="mt-2 text-success">🎉 Venta Completada</h4>
+                    <h4 class="mt-2 text-success">Venta Completada</h4>
                 </div>
                 <div class="border rounded p-3 bg-light">
                     <p><strong>ID Venta:</strong> #${resumen.id_venta}</p>
@@ -830,16 +767,11 @@
         }
 
         function imprimirTicket() {
-            alert('🎟️ Función de impresión - En desarrollo con amor 💝');
+            alert('Función de impresión - En desarrollo');
         }
 
         function editarProducto(index) {
-            alert('✏️ Función de edición - Próximamente con más amor 💖');
-        }
-
-        // Función especial de amor
-        function enviarAmor() {
-            mostrarAlerta('💝 ¡Te amo! POCOPAN funciona con amor', 'love');
+            alert('Función de edición - Próximamente');
         }
     </script>
 </body>
