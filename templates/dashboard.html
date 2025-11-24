@@ -7,10 +7,9 @@
     <!-- Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <div>
-            <h1 style="color: var(--naranja-primario); margin-bottom: 0.3rem; font-size: 1.5rem;">{{ stats.dashboard_nombre }}</h1>
+            <h1 style="color: var(--naranja-primario); margin-bottom: 0.3rem; font-size: 1.5rem;">POCOPAN</h1>
             <p style="color: var(--texto-gris); font-size: 0.9rem;">
-                📊 Estadísticas en tiempo real • 
-                <span id="fecha-actual" style="font-weight: 600;"></span>
+                Punto de Venta • <strong>Dashboard</strong>
             </p>
         </div>
         <div class="user-terminal">
@@ -18,30 +17,64 @@
         </div>
     </div>
 
+    <hr style="border: none; border-top: 2px solid var(--naranja-primario); margin: 1rem 0;">
+
+    <!-- Dashboard Info -->
+    <div style="margin-bottom: 1.5rem;">
+        <h2 style="color: var(--texto-oscuro); margin-bottom: 0.5rem; font-size: 1.1rem;">
+            {{ stats.dashboard_nombre }}
+        </h2>
+        <p style="color: var(--texto-gris); font-size: 0.9rem; margin: 0;">
+            Estadísticas en tiempo real • <span id="fecha-actual"></span>
+        </p>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="card mb-2">
+        <div class="card-header" style="background: var(--naranja-primario); color: white;">
+            🚀 Actualizar Datos
+        </div>
+        <div class="card-body">
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center;">
+                <button onclick="cargarEstadisticasAvanzadas()" class="btn btn-primary">
+                    🔄 Actualizar Datos
+                </button>
+                <button onclick="descargarExcel()" class="btn btn-success">
+                    📊 Descargar Excel de Ventas
+                </button>
+                <span style="color: var(--texto-gris); font-size: 0.8rem;">
+                    Actualizado: {{ now.strftime('%H:%M') }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <!-- Selector de Terminal (solo admin) -->
     {% if rol_actual == 'admin' %}
     <div class="card mb-2">
-        <div class="card-body" style="padding: 0.8rem;">
-            <h3 style="margin-bottom: 0.8rem; color: var(--naranja-primario); font-size: 1rem;">🔍 Seleccionar Terminal</h3>
+        <div class="card-header">
+            🔍 Seleccionar Terminal
+        </div>
+        <div class="card-body" style="padding: 1rem;">
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <a href="{{ url_for('dashboard_terminal', terminal_id='TODAS') }}" 
                    class="btn {% if terminal_actual == 'TODAS' %}btn-primary{% else %}btn-outline{% endif %}" 
-                   style="padding: 6px 12px; font-size: 0.8rem;">
+                   style="padding: 8px 16px; font-size: 0.85rem;">
                     📊 Todas las Terminales
                 </a>
                 <a href="{{ url_for('dashboard_terminal', terminal_id='POS1') }}" 
                    class="btn {% if terminal_actual == 'POS1' %}btn-primary{% else %}btn-outline{% endif %}" 
-                   style="padding: 6px 12px; font-size: 0.8rem;">
+                   style="padding: 8px 16px; font-size: 0.85rem;">
                     🏪 POS 1
                 </a>
                 <a href="{{ url_for('dashboard_terminal', terminal_id='POS2') }}" 
                    class="btn {% if terminal_actual == 'POS2' %}btn-primary{% else %}btn-outline{% endif %}" 
-                   style="padding: 6px 12px; font-size: 0.8rem;">
+                   style="padding: 8px 16px; font-size: 0.85rem;">
                     🏪 POS 2
                 </a>
                 <a href="{{ url_for('dashboard_terminal', terminal_id='POS3') }}" 
                    class="btn {% if terminal_actual == 'POS3' %}btn-primary{% else %}btn-outline{% endif %}" 
-                   style="padding: 6px 12px; font-size: 0.8rem;">
+                   style="padding: 8px 16px; font-size: 0.85rem;">
                     🏪 POS 3
                 </a>
             </div>
@@ -51,109 +84,121 @@
 
     <!-- Estadísticas Principales -->
     <div class="grid grid-4 mb-2">
+        <!-- Ventas Totales -->
         <div class="card">
-            <div class="card-header" style="background: var(--naranja-primario); padding: 0.8rem;">
+            <div class="card-header" style="background: var(--naranja-primario); color: white; text-align: center; padding: 0.8rem;">
                 🏷️ Ventas Totales
             </div>
-            <div class="card-body" style="text-align: center; padding: 1rem 0.5rem;">
-                <h2 style="font-size: 1.8rem; color: var(--naranja-primario); margin: 0; line-height: 1;">{{ stats.ventas_totales }}</h2>
-                <p style="color: var(--texto-gris); margin: 0.3rem 0 0 0; font-size: 0.8rem;">Transacciones</p>
-                <div style="margin-top: 0.5rem; padding: 0.4rem; background: var(--naranja-fondo); border-radius: 4px;">
-                    <small style="color: var(--naranja-oscuro); font-size: 0.75rem;">Hoy: {{ stats.ventas_hoy_count }}</small>
+            <div class="card-body" style="text-align: center; padding: 1.2rem 0.5rem;">
+                <h2 style="font-size: 2rem; color: var(--naranja-primario); margin: 0 0 0.5rem 0; line-height: 1;">
+                    {{ stats.ventas_totales }}
+                </h2>
+                <p style="color: var(--texto-gris); margin: 0; font-size: 0.9rem;">Transacciones</p>
+                <div style="margin-top: 0.8rem; padding: 0.5rem; background: var(--naranja-fondo); border-radius: 6px;">
+                    <small style="color: var(--naranja-oscuro); font-size: 0.8rem; font-weight: 600;">
+                        Hoy: {{ stats.ventas_hoy_count }}
+                    </small>
                 </div>
             </div>
         </div>
 
+        <!-- Ingresos Totales -->
         <div class="card">
-            <div class="card-header" style="background: #28a745; padding: 0.8rem;">
+            <div class="card-header" style="background: #28a745; color: white; text-align: center; padding: 0.8rem;">
                 💰 Ingresos Totales
             </div>
-            <div class="card-body" style="text-align: center; padding: 1rem 0.5rem;">
-                <h2 style="font-size: 1.4rem; color: #28a745; margin: 0; line-height: 1.2;">{{ stats.ingresos_totales }}</h2>
-                <p style="color: var(--texto-gris); margin: 0.3rem 0 0 0; font-size: 0.8rem;">Acumulado</p>
-                <div style="margin-top: 0.5rem; padding: 0.4rem; background: #f0fff4; border-radius: 4px;">
-                    <small style="color: #28a745; font-size: 0.75rem;" id="ingresos-hoy">Hoy: $0.00</small>
+            <div class="card-body" style="text-align: center; padding: 1.2rem 0.5rem;">
+                <h2 style="font-size: 1.5rem; color: #28a745; margin: 0 0 0.5rem 0; line-height: 1.2;">
+                    {{ stats.ingresos_totales }}
+                </h2>
+                <p style="color: var(--texto-gris); margin: 0; font-size: 0.9rem;">Acumulado</p>
+                <div style="margin-top: 0.8rem; padding: 0.5rem; background: #f0fff4; border-radius: 6px;">
+                    <small style="color: #28a745; font-size: 0.8rem; font-weight: 600;" id="ingresos-hoy">
+                        Hoy: $0.00
+                    </small>
                 </div>
             </div>
         </div>
 
+        <!-- Productos -->
         <div class="card">
-            <div class="card-header" style="background: #17a2b8; padding: 0.8rem;">
+            <div class="card-header" style="background: #17a2b8; color: white; text-align: center; padding: 0.8rem;">
                 📦 Productos
             </div>
-            <div class="card-body" style="text-align: center; padding: 1rem 0.5rem;">
-                <h2 style="font-size: 1.8rem; color: #17a2b8; margin: 0; line-height: 1;">{{ stats.productos_catalogo }}</h2>
-                <p style="color: var(--texto-gris); margin: 0.3rem 0 0 0; font-size: 0.8rem;">En catálogo</p>
-                <div style="margin-top: 0.5rem; padding: 0.4rem; background: #f0fdff; border-radius: 4px;">
-                    <small style="color: #17a2b8; font-size: 0.75rem;" id="productos-vendidos-hoy">Vendidos hoy: 0</small>
+            <div class="card-body" style="text-align: center; padding: 1.2rem 0.5rem;">
+                <h2 style="font-size: 2rem; color: #17a2b8; margin: 0 0 0.5rem 0; line-height: 1;">
+                    {{ stats.productos_catalogo }}
+                </h2>
+                <p style="color: var(--texto-gris); margin: 0; font-size: 0.9rem;">En catálogo</p>
+                <div style="margin-top: 0.8rem; padding: 0.5rem; background: #f0fdff; border-radius: 6px;">
+                    <small style="color: #17a2b8; font-size: 0.8rem; font-weight: 600;" id="productos-vendidos-hoy">
+                        Vendidos hoy: 0
+                    </small>
                 </div>
             </div>
         </div>
 
+        <!-- Monto Histórico -->
         <div class="card">
-            <div class="card-header" style="background: #6f42c1; padding: 0.8rem;">
+            <div class="card-header" style="background: #6f42c1; color: white; text-align: center; padding: 0.8rem;">
                 📈 Monto Histórico
             </div>
-            <div class="card-body" style="text-align: center; padding: 1rem 0.5rem;">
-                <h2 style="font-size: 1.4rem; color: #6f42c1; margin: 0; line-height: 1.2;" id="monto-historico">$0.00</h2>
-                <p style="color: var(--texto-gris); margin: 0.3rem 0 0 0; font-size: 0.8rem;">Total histórico</p>
-                <div style="margin-top: 0.5rem; padding: 0.4rem; background: #f8f5ff; border-radius: 4px;">
-                    <small style="color: #6f42c1; font-size: 0.75rem;" id="promedio-diario">Promedio: $0.00/día</small>
+            <div class="card-body" style="text-align: center; padding: 1.2rem 0.5rem;">
+                <h2 style="font-size: 1.5rem; color: #6f42c1; margin: 0 0 0.5rem 0; line-height: 1.2;" id="monto-historico">
+                    $0.00
+                </h2>
+                <p style="color: var(--texto-gris); margin: 0; font-size: 0.9rem;">Total histórico</p>
+                <div style="margin-top: 0.8rem; padding: 0.5rem; background: #f8f5ff; border-radius: 6px;">
+                    <small style="color: #6f42c1; font-size: 0.8rem; font-weight: 600;" id="promedio-diario">
+                        Promedio: $0.00/día
+                    </small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Acciones Rápidas -->
-    <div class="card mb-2">
-        <div class="card-header">
-            🚀 Acciones Rápidas
-        </div>
-        <div class="card-body">
-            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
-                <button onclick="descargarExcel()" class="btn btn-success">
-                    📊 Descargar Excel de Ventas
-                </button>
-                <button onclick="cargarEstadisticasAvanzadas()" class="btn btn-outline">
-                    🔄 Actualizar Datos
-                </button>
-                {% if rol_actual == 'admin' %}
-                <a href="{{ url_for('editor_catalogo') }}" class="btn btn-outline">
-                    ✏️ Editor de Catálogo
-                </a>
-                {% endif %}
+    <!-- Sección Inferior - 2 Columnas -->
+    <div class="grid grid-2 gap-2">
+        <!-- Columna Izquierda: Transacciones -->
+        <div class="card">
+            <div class="card-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📋 Transacciones</span>
+                    <span class="user-terminal" id="total-transacciones-hoy">Hoy: 0</span>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Últimas Transacciones del Día -->
-    <div class="card mb-2">
-        <div class="card-header">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>📋 Transacciones de Hoy</span>
-                <span class="user-terminal" id="total-transacciones-hoy">0 transacciones</span>
-            </div>
-        </div>
-        <div class="card-body">
-            <div id="lista-transacciones-hoy" class="scroll-container" style="max-height: 400px;">
-                <div style="text-align: center; padding: 2rem; color: var(--texto-gris);">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔄</div>
-                    <p>Cargando transacciones del día...</p>
+            <div class="card-body">
+                <div style="margin-bottom: 1rem; text-align: center;">
+                    <div style="display: inline-block; background: var(--naranja-fondo); padding: 0.8rem 1.5rem; border-radius: 8px;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: var(--naranja-primario);" id="transacciones-hoy-count">
+                            0
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--texto-gris);">Transacciones de Hoy</div>
+                    </div>
+                </div>
+                
+                <div id="lista-transacciones-hoy" class="scroll-container" style="max-height: 300px;">
+                    <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                        <p>No hay transacciones hoy</p>
+                        <p style="font-size: 0.8rem;">Las ventas de hoy aparecerán aquí</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Productos Más Vendidos (simplificado) -->
-    <div class="card">
-        <div class="card-header">
-            🏆 Productos Más Vendidos (Hoy)
-        </div>
-        <div class="card-body">
-            <div id="lista-productos-vendidos">
-                <div style="text-align: center; padding: 1rem; color: var(--texto-gris);">
-                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📦</div>
-                    <p>Cargando productos más vendidos...</p>
+        <!-- Columna Derecha: Productos Más Vendidos -->
+        <div class="card">
+            <div class="card-header">
+                🏆 Productos Más Vendidos
+            </div>
+            <div class="card-body">
+                <div id="lista-productos-vendidos">
+                    <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+                        <p>No hay productos vendidos hoy</p>
+                        <p style="font-size: 0.8rem;">Los productos más vendidos aparecerán aquí</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -169,16 +214,18 @@
             <div class="grid grid-3">
                 {% for terminal, terminal_stats in stats_por_terminal.items() %}
                 <div class="card">
-                    <div class="card-header" style="background: var(--naranja-claro); padding: 0.8rem;">
+                    <div class="card-header" style="background: var(--naranja-claro); text-align: center; padding: 0.8rem;">
                         🏪 {{ terminal }}
                     </div>
-                    <div class="card-body" style="padding: 0.8rem;">
+                    <div class="card-body" style="padding: 1rem;">
                         <div style="text-align: center; margin-bottom: 0.8rem;">
-                            <h3 style="color: var(--naranja-primario); font-size: 1.2rem; margin: 0;">{{ terminal_stats.ventas_totales }}</h3>
-                            <p style="color: var(--texto-gris); margin: 0.2rem 0 0 0; font-size: 0.75rem;">Ventas Totales</p>
+                            <h3 style="color: var(--naranja-primario); font-size: 1.5rem; margin: 0 0 0.3rem 0;">
+                                {{ terminal_stats.ventas_totales }}
+                            </h3>
+                            <p style="color: var(--texto-gris); margin: 0; font-size: 0.8rem;">Ventas Totales</p>
                         </div>
-                        <div style="background: var(--naranja-fondo); padding: 0.6rem; border-radius: 6px; font-size: 0.8rem;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                        <div style="background: var(--naranja-fondo); padding: 0.8rem; border-radius: 6px; font-size: 0.8rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
                                 <span>Ingresos:</span>
                                 <strong>{{ terminal_stats.ingresos_totales }}</strong>
                             </div>
@@ -209,6 +256,8 @@
 
     // Cargar estadísticas avanzadas
     function cargarEstadisticasAvanzadas() {
+        showNotification('🔄 Actualizando datos...', 'info');
+        
         fetch('/estadisticas-avanzadas?terminal={{ terminal_actual }}')
             .then(response => response.json())
             .then(data => {
@@ -216,10 +265,14 @@
                     actualizarDashboard(data.estadisticas);
                     renderizarTransaccionesHoy(data.transacciones_hoy);
                     renderizarProductosVendidos(data.productos_mas_vendidos);
+                    showNotification('✅ Datos actualizados', 'success');
+                } else {
+                    showNotification('❌ Error al cargar datos', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error cargando estadísticas:', error);
+                showNotification('❌ Error de conexión', 'error');
             });
     }
 
@@ -235,7 +288,8 @@
         document.getElementById('promedio-diario').textContent = `Promedio: $${estadisticas.promedio_diario.toFixed(2)}/día`;
         
         // Actualizar total de transacciones hoy
-        document.getElementById('total-transacciones-hoy').textContent = `${estadisticas.transacciones_hoy_count} transacciones`;
+        document.getElementById('total-transacciones-hoy').textContent = `Hoy: ${estadisticas.transacciones_hoy_count}`;
+        document.getElementById('transacciones-hoy-count').textContent = estadisticas.transacciones_hoy_count;
     }
 
     function renderizarTransaccionesHoy(transacciones) {
@@ -243,7 +297,7 @@
         
         if (transacciones.length === 0) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: var(--texto-gris);">
+                <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
                     <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
                     <p>No hay transacciones hoy</p>
                     <p style="font-size: 0.8rem;">Las ventas de hoy aparecerán aquí</p>
@@ -254,7 +308,7 @@
 
         let html = '';
         transacciones.forEach(transaccion => {
-            const fecha = new Date(transaccion.fecha + 'T' + transaccion.hora);
+            const fecha = new Date(transaccion.Fecha + 'T' + transaccion.Hora);
             const horaFormateada = fecha.toLocaleTimeString('es-ES', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
@@ -265,26 +319,21 @@
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
                         <div style="flex: 1;">
                             <h4 style="color: var(--texto-oscuro); margin: 0 0 0.2rem 0; font-size: 0.9rem;">
-                                ${transaccion.producto}
+                                ${transaccion.Producto}
                             </h4>
                             <div style="display: flex; gap: 0.8rem; font-size: 0.75rem; color: var(--texto-gris);">
-                                <span><strong>Cliente:</strong> ${transaccion.id_cliente}</span>
-                                <span><strong>Terminal:</strong> ${transaccion.id_terminal}</span>
+                                <span><strong>Cliente:</strong> ${transaccion.ID_Cliente}</span>
                                 <span><strong>Hora:</strong> ${horaFormateada}</span>
                             </div>
                         </div>
                         <div style="text-align: right; min-width: 100px;">
                             <div style="font-size: 1rem; font-weight: bold; color: #28a745;">
-                                $${transaccion.total_venta.toFixed(2)}
+                                $${transaccion.Total_Venta.toFixed(2)}
                             </div>
                             <div style="font-size: 0.75rem; color: var(--texto-gris);">
-                                Cant: ${transaccion.cantidad}
+                                Cant: ${transaccion.Cantidad}
                             </div>
                         </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.75rem;">
-                        <div><strong>Precio Unit:</strong> $${transaccion.precio_unitario.toFixed(2)}</div>
-                        <div><strong>Vendedor:</strong> ${transaccion.vendedor}</div>
                     </div>
                 </div>
             `;
@@ -298,8 +347,10 @@
         
         if (productos.length === 0) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 1rem; color: var(--texto-gris);">
+                <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
                     <p>No hay productos vendidos hoy</p>
+                    <p style="font-size: 0.8rem;">Los productos más vendidos aparecerán aquí</p>
                 </div>
             `;
             return;
@@ -307,17 +358,19 @@
 
         let html = '<div style="display: grid; gap: 0.5rem;">';
         productos.forEach((producto, index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
             html += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem; background: var(--naranja-fondo); border-radius: 6px;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="background: var(--naranja-primario); color: white; padding: 2px 6px; border-radius: 12px; font-size: 0.7rem; font-weight: bold;">
-                            ${index + 1}
-                        </span>
-                        <span style="font-size: 0.85rem; font-weight: 500;">${producto.producto}</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; background: var(--naranja-fondo); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <span style="font-size: 1.2rem;">${medal}</span>
+                        <div>
+                            <div style="font-size: 0.9rem; font-weight: 500;">${producto.producto}</div>
+                            <div style="font-size: 0.75rem; color: var(--texto-gris);">${producto.cantidad} unidades</div>
+                        </div>
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 0.9rem; font-weight: bold; color: var(--naranja-primario);">
-                            ${producto.cantidad} unidades
+                            #${index + 1}
                         </div>
                     </div>
                 </div>
@@ -329,7 +382,7 @@
     }
 
     function descargarExcel() {
-        showNotification('Generando archivo Excel...', 'info');
+        showNotification('📊 Generando archivo Excel...', 'info');
         
         fetch('/descargar-excel?terminal={{ terminal_actual }}')
             .then(response => {
