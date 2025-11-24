@@ -794,21 +794,7 @@ def eliminar_producto():
         print(f"Error eliminando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
-# Ruta para favicon para evitar errores 500
-@app.route('/favicon.ico')
-def favicon():
-    return '', 204
-
-@app.route('/health')
-def health():
-    return jsonify({
-        "status": "healthy", 
-        "sistema": sistema is not None,
-        "timestamp": datetime.now().isoformat()
-    })
-
- === RUTAS PARA ESTADÍSTICAS AVANZADAS ===
-
+# === RUTAS PARA ESTADÍSTICAS AVANZADAS ===
 @app.route('/estadisticas-avanzadas')
 @login_required
 def estadisticas_avanzadas():
@@ -925,6 +911,19 @@ def reset_diario():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# Ruta para favicon para evitar errores 500
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
+@app.route('/health')
+def health():
+    return jsonify({
+        "status": "healthy", 
+        "sistema": sistema is not None,
+        "timestamp": datetime.now().isoformat()
+    })
 
 @app.errorhandler(404)
 def not_found(error):
