@@ -1,15 +1,192 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
-</head>
-<body>
-    <h1>{{ stats.dashboard_nombre }}</h1>
-    <p>Ventas Totales: {{ stats.ventas_totales }}</p>
-    <p>Ingresos: {{ stats.ingresos_totales }}</p>
-    <p>Productos: {{ stats.productos_catalogo }}</p>
-    
-    <a href="/">POS</a> | 
-    <a href="/logout">Logout</a>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Dashboard - POCOPAN{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="color: var(--naranja-primario); margin-bottom: 0.5rem;">{{ stats.dashboard_nombre }}</h1>
+            <p style="color: var(--texto-gris);">Estadísticas y métricas del sistema</p>
+        </div>
+        <div class="user-terminal">
+            Actualizado: {{ now.strftime('%H:%M') if now else 'Ahora' }}
+        </div>
+    </div>
+
+    <!-- Selector de Terminal (solo admin) -->
+    {% if rol_actual == 'admin' %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <h3 style="margin-bottom: 1rem; color: var(--naranja-primario);">🔍 Seleccionar Terminal</h3>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <a href="{{ url_for('dashboard_terminal', terminal_id='TODAS') }}" 
+                   class="btn {% if terminal_actual == 'TODAS' %}btn-primary{% else %}btn-outline{% endif %}" 
+                   style="padding: 10px 20px;">
+                    📊 Todas las Terminales
+                </a>
+                <a href="{{ url_for('dashboard_terminal', terminal_id='POS1') }}" 
+                   class="btn {% if terminal_actual == 'POS1' %}btn-primary{% else %}btn-outline{% endif %}" 
+                   style="padding: 10px 20px;">
+                    🏪 POS 1
+                </a>
+                <a href="{{ url_for('dashboard_terminal', terminal_id='POS2') }}" 
+                   class="btn {% if terminal_actual == 'POS2' %}btn-primary{% else %}btn-outline{% endif %}" 
+                   style="padding: 10px 20px;">
+                    🏪 POS 2
+                </a>
+                <a href="{{ url_for('dashboard_terminal', terminal_id='POS3') }}" 
+                   class="btn {% if terminal_actual == 'POS3' %}btn-primary{% else %}btn-outline{% endif %}" 
+                   style="padding: 10px 20px;">
+                    🏪 POS 3
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas Principales -->
+    <div class="grid grid-4">
+        <div class="card">
+            <div class="card-header" style="background: var(--naranja-primario);">
+                🏷️ Ventas Totales
+            </div>
+            <div class="card-body" style="text-align: center; padding: 2rem 1rem;">
+                <h2 style="font-size: 3rem; color: var(--naranja-primario); margin: 0; line-height: 1;">{{ stats.ventas_totales }}</h2>
+                <p style="color: var(--texto-gris); margin: 0.5rem 0 0 0;">Transacciones</p>
+                <div style="margin-top: 1rem; padding: 0.5rem; background: var(--naranja-fondo); border-radius: 6px;">
+                    <small style="color: var(--naranja-oscuro);">Hoy: {{ stats.ventas_hoy_count }}</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="background: #28a745;">
+                💰 Ingresos Totales
+            </div>
+            <div class="card-body" style="text-align: center; padding: 2rem 1rem;">
+                <h2 style="font-size: 2rem; color: #28a745; margin: 0; line-height: 1.2;">{{ stats.ingresos_totales }}</h2>
+                <p style="color: var(--texto-gris); margin: 0.5rem 0 0 0;">Acumulado</p>
+                <div style="margin-top: 1rem; padding: 0.5rem; background: #f0fff4; border-radius: 6px;">
+                    <small style="color: #28a745;">Ingresos totales</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="background: #17a2b8;">
+                📦 Productos
+            </div>
+            <div class="card-body" style="text-align: center; padding: 2rem 1rem;">
+                <h2 style="font-size: 3rem; color: #17a2b8; margin: 0; line-height: 1;">{{ stats.productos_catalogo }}</h2>
+                <p style="color: var(--texto-gris); margin: 0.5rem 0 0 0;">En catálogo</p>
+                <div style="margin-top: 1rem; padding: 0.5rem; background: #f0fdff; border-radius: 6px;">
+                    <small style="color: #17a2b8;">Disponibles</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="background: #6f42c1;">
+                👥 Usuarios Activos
+            </div>
+            <div class="card-body" style="text-align: center; padding: 2rem 1rem;">
+                <h2 style="font-size: 3rem; color: #6f42c1; margin: 0; line-height: 1;">{{ stats.usuarios_activos }}</h2>
+                <p style="color: var(--texto-gris); margin: 0.5rem 0 0 0;">Conectados</p>
+                <div style="margin-top: 1rem; padding: 0.5rem; background: #f8f5ff; border-radius: 6px;">
+                    <small style="color: #6f42c1;">En este terminal</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparación de Terminales (solo admin) -->
+    {% if rol_actual == 'admin' and stats_por_terminal %}
+    <div class="card mt-3">
+        <div class="card-header">
+            📈 Comparación entre Terminales
+        </div>
+        <div class="card-body">
+            <div class="grid grid-3">
+                {% for terminal, terminal_stats in stats_por_terminal.items() %}
+                <div class="card">
+                    <div class="card-header" style="background: var(--naranja-claro);">
+                        🏪 {{ terminal }}
+                    </div>
+                    <div class="card-body">
+                        <div style="text-align: center; margin-bottom: 1rem;">
+                            <h3 style="color: var(--naranja-primario); font-size: 2rem; margin: 0;">{{ terminal_stats.ventas_totales }}</h3>
+                            <p style="color: var(--texto-gris); margin: 0;">Ventas Totales</p>
+                        </div>
+                        <div style="background: var(--naranja-fondo); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Ingresos:</span>
+                                <strong>{{ terminal_stats.ingresos_totales }}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Ventas Hoy:</span>
+                                <strong>{{ terminal_stats.ventas_hoy_count }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Información del Sistema -->
+    <div class="card mt-3">
+        <div class="card-header">
+            ⚙️ Información del Sistema
+        </div>
+        <div class="card-body">
+            <div class="grid grid-2">
+                <div>
+                    <h4 style="color: var(--naranja-primario); margin-bottom: 1rem;">👤 Información de Usuario</h4>
+                    <div style="background: var(--naranja-fondo); padding: 1rem; border-radius: 8px;">
+                        <p><strong>Usuario:</strong> {{ session.usuario }}</p>
+                        <p><strong>Rol:</strong> 
+                            <span style="background: var(--naranja-primario); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
+                                {{ rol_actual|upper }}
+                            </span>
+                        </p>
+                        <p><strong>Terminal:</strong> {{ terminal_actual }}</p>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="color: var(--naranja-primario); margin-bottom: 1rem;">🔧 Configuración</h4>
+                    <div style="background: var(--naranja-fondo); padding: 1rem; border-radius: 8px;">
+                        <p><strong>Empresa:</strong> {{ empresa }}</p>
+                        <p><strong>IVA Configurado:</strong> {{ sistema.config.iva }}%</p>
+                        <p><strong>Moneda:</strong> {{ sistema.config.moneda }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="card mt-3">
+        <div class="card-header">
+            🚀 Acciones Rápidas
+        </div>
+        <div class="card-body">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    🛒 Ir al Punto de Venta
+                </a>
+                <a href="/diagnostico" target="_blank" class="btn btn-outline">
+                    🔍 Ver Diagnóstico del Sistema
+                </a>
+                {% if rol_actual == 'admin' %}
+                <a href="{{ url_for('dashboard_terminal', terminal_id='TODAS') }}" class="btn btn-outline">
+                    📊 Vista General Completa
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
