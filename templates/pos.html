@@ -52,47 +52,55 @@
 
                 <!-- Lista de Productos - Diseño Vertical -->
                 <div id="lista-productos" style="max-height: 600px; overflow-y: auto; padding-right: 10px;">
-                    {% for producto in sistema.catalogo %}
-                    <div class="producto-item" 
-                         data-categoria="{{ producto.Categoría }}"
-                         data-nombre="{{ producto.Nombre|lower }}"
-                         style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s ease; background: white;"
-                         onmouseover="this.style.borderColor='var(--naranja-primario)'; this.style.backgroundColor='var(--naranja-fondo)';"
-                         onmouseout="this.style.borderColor='var(--naranja-borde)'; this.style.backgroundColor='white';"
-                         onclick="seleccionarProducto('{{ producto.Nombre }}')">
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                            <div style="flex: 1;">
-                                <h3 style="color: var(--naranja-primario); margin: 0 0 0.5rem 0; font-size: 1rem; line-height: 1.3;">
-                                    {{ producto.Nombre }}
-                                </h3>
-                                <div style="display: flex; gap: 1rem; font-size: 0.85rem; color: var(--texto-gris); margin-bottom: 0.5rem;">
-                                    <span><strong>Categoría:</strong> {{ producto.Categoría }}</span>
-                                    {% if producto.Subcategoría and producto.Subcategoría != '' %}
-                                    <span><strong>Subcategoría:</strong> {{ producto.Subcategoría }}</span>
-                                    {% endif %}
+                    {% if sistema.catalogo_cargado and sistema.catalogo %}
+                        {% for producto in sistema.catalogo %}
+                        <div class="producto-item" 
+                             data-categoria="{{ producto.Categoría }}"
+                             data-nombre="{{ producto.Nombre|lower }}"
+                             style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s ease; background: white;"
+                             onmouseover="this.style.borderColor='var(--naranja-primario)'; this.style.backgroundColor='var(--naranja-fondo)';"
+                             onmouseout="this.style.borderColor='var(--naranja-borde)'; this.style.backgroundColor='white';"
+                             onclick="seleccionarProducto('{{ producto.Nombre }}')">
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div style="flex: 1;">
+                                    <h3 style="color: var(--naranja-primario); margin: 0 0 0.5rem 0; font-size: 1rem; line-height: 1.3;">
+                                        {{ producto.Nombre }}
+                                    </h3>
+                                    <div style="display: flex; gap: 1rem; font-size: 0.85rem; color: var(--texto-gris); margin-bottom: 0.5rem;">
+                                        <span><strong>Categoría:</strong> {{ producto.Categoría }}</span>
+                                        {% if producto.Subcategoría and producto.Subcategoría != '' %}
+                                        <span><strong>Subcategoría:</strong> {{ producto.Subcategoría }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: var(--texto-gris);">
+                                        <strong>Proveedor:</strong> {{ producto.Proveedor }}
+                                    </div>
                                 </div>
-                                <div style="font-size: 0.9rem; color: var(--texto-gris);">
-                                    <strong>Proveedor:</strong> {{ producto.Proveedor }}
+                                <div style="text-align: right; min-width: 120px;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: var(--naranja-primario); margin-bottom: 0.5rem;">
+                                        ${{ "%.2f"|format(producto.get('Precio Venta', 0)) }}
+                                    </div>
+                                    <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; width: 100%;">
+                                        Agregar al Carrito
+                                    </button>
                                 </div>
-                            </div>
-                            <div style="text-align: right; min-width: 120px;">
-                                <div style="font-size: 1.2rem; font-weight: bold; color: var(--naranja-primario); margin-bottom: 0.5rem;">
-                                    ${{ "%.2f"|format(producto['Precio Venta']) }}
-                                </div>
-                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; width: 100%;">
-                                    Agregar al Carrito
-                                </button>
                             </div>
                         </div>
-                    </div>
-                    {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align: center; padding: 3rem; color: var(--texto-gris);">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+                            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">Catálogo no disponible</p>
+                            <p style="font-size: 0.9rem;">No se pudieron cargar los productos</p>
+                        </div>
+                    {% endif %}
                 </div>
 
                 <!-- Contador de productos visibles -->
                 <div style="text-align: center; margin-top: 1rem; padding: 0.5rem; background: var(--naranja-fondo); border-radius: 6px;">
                     <small style="color: var(--naranja-primario);">
-                        Mostrando <span id="contador-productos">{{ sistema.catalogo|length }}</span> de {{ sistema.catalogo|length }} productos
+                        Mostrando <span id="contador-productos">{{ sistema.catalogo|length if sistema.catalogo else 0 }}</span> de {{ sistema.catalogo|length if sistema.catalogo else 0 }} productos
                     </small>
                 </div>
             </div>
@@ -252,15 +260,22 @@
         const modal = document.getElementById('modal-producto');
         const contenido = document.getElementById('detalles-producto');
         
+        // Validar que los detalles tengan precio
+        const precio = detalles.precio || detalles['Precio Venta'] || 0;
+        const categoria = detalles.categoria || detalles.Categoría || 'N/A';
+        const subcategoria = detalles.subcategoria || detalles.Subcategoría || 'N/A';
+        const proveedor = detalles.proveedor || detalles.Proveedor || 'N/A';
+        const estado = detalles.estado || detalles.Estado || 'Disponible';
+        
         contenido.innerHTML = `
-            <h3 style="color: var(--naranja-primario); margin-bottom: 1rem;">${detalles.nombre}</h3>
+            <h3 style="color: var(--naranja-primario); margin-bottom: 1rem;">${detalles.nombre || detalles.Nombre || 'Producto'}</h3>
             <div style="background: var(--naranja-fondo); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
-                    <div><strong>Precio:</strong> $${detalles.precio.toFixed(2)}</div>
-                    <div><strong>Categoría:</strong> ${detalles.categoria || 'N/A'}</div>
-                    <div><strong>Subcategoría:</strong> ${detalles.subcategoria || 'N/A'}</div>
-                    <div><strong>Proveedor:</strong> ${detalles.proveedor || 'N/A'}</div>
-                    <div><strong>Estado:</strong> ${detalles.estado || 'Disponible'}</div>
+                    <div><strong>Precio:</strong> $${parseFloat(precio).toFixed(2)}</div>
+                    <div><strong>Categoría:</strong> ${categoria}</div>
+                    <div><strong>Subcategoría:</strong> ${subcategoria}</div>
+                    <div><strong>Proveedor:</strong> ${proveedor}</div>
+                    <div><strong>Estado:</strong> ${estado}</div>
                 </div>
             </div>
         `;
@@ -513,12 +528,6 @@
                 }
             });
         }
-
-        // Prevenir cualquier evento automático no deseado
-        document.addEventListener('click', function(e) {
-            // Solo permitir eventos de clic intencionales
-            console.log('Click en:', e.target);
-        }, true);
     });
 </script>
 {% endblock %}
