@@ -45,5 +45,102 @@
         document.getElementById("wrapper").classList.toggle("toggled");
     };
 </script>
+        <!-- BUSCA EL FINAL DEL ARCHIVO base.html -->
+<!-- ANTES del cierre </body> PEGA ESTO: -->
+
+<div class="notification-container" id="notificationContainer"></div>
+
+<script>
+// PEGA ESTE CÓDIGO JAVASCRIPT JUSTO DESPUÉS
+
+// Función para mostrar notificación de éxito
+function showSuccess(message, title = 'Éxito') {
+    showNotification(title, message, 'success');
+}
+
+// Función para mostrar notificación de error
+function showError(message, title = 'Error') {
+    showNotification(title, message, 'error');
+}
+
+// Función para mostrar notificación de advertencia
+function showWarning(message, title = 'Advertencia') {
+    showNotification(title, message, 'warning');
+}
+
+// Función para mostrar notificación informativa
+function showInfo(message, title = 'Información') {
+    showNotification(title, message, 'info');
+}
+
+// Función principal para mostrar notificaciones
+function showNotification(title, message, type = 'info') {
+    const container = document.getElementById('notificationContainer');
+    
+    // Si no existe el contenedor, crearlo
+    if (!container) {
+        const newContainer = document.createElement('div');
+        newContainer.className = 'notification-container';
+        newContainer.id = 'notificationContainer';
+        document.body.appendChild(newContainer);
+    }
+    
+    const actualContainer = document.getElementById('notificationContainer');
+    
+    // Crear elemento de notificación
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    // Icono según el tipo
+    let icon = '✓';
+    if (type === 'error') icon = '✕';
+    if (type === 'warning') icon = '⚠';
+    if (type === 'info') icon = 'ℹ';
+    
+    // Contenido de la notificación
+    notification.innerHTML = `
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-content">
+            <div class="notification-title">${title}</div>
+            <div class="notification-message">${message}</div>
+            <div class="auto-close-bar">
+                <div class="auto-close-progress" style="background: ${getProgressColor(type)}"></div>
+            </div>
+        </div>
+    `;
+    
+    // Añadir al contenedor
+    actualContainer.appendChild(notification);
+    
+    // Mostrar con animación
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Ocultar después de 2 segundos
+    setTimeout(() => {
+        notification.classList.remove('show');
+        notification.classList.add('hide');
+        
+        // Eliminar del DOM después de la animación
+        setTimeout(() => {
+            if (notification.parentNode) {
+                actualContainer.removeChild(notification);
+            }
+        }, 400);
+    }, 2000);
+}
+
+// Obtener color para la barra de progreso según el tipo
+function getProgressColor(type) {
+    switch(type) {
+        case 'success': return '#A5D6A7';
+        case 'error': return '#EF9A9A';
+        case 'warning': return '#FFCC80';
+        case 'info': return '#90CAF9';
+        default: return '#FFFFFF';
+    }
+}
+</script>
 </body>
 </html>

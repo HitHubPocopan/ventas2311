@@ -99,3 +99,100 @@
 .card:hover {
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
+
+/* PEGA ESTO AL FINAL DE TU ARCHIVO styles.css */
+
+/* ========== NOTIFICACIONES ========== */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.notification {
+    padding: 18px 25px;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    max-width: 350px;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: transform 0.4s, opacity 0.4s;
+}
+
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification.hide {
+    transform: translateX(400px);
+    opacity: 0;
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    border-left: 5px solid #81C784;
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #f44336, #c62828);
+    border-left: 5px solid #ef9a9a;
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, #ff9800, #ef6c00);
+    border-left: 5px solid #ffcc80;
+}
+
+.notification.info {
+    background: linear-gradient(135deg, #2196F3, #1565C0);
+    border-left: 5px solid #90caf9;
+}
+
+.notification-icon {
+    margin-right: 15px;
+    font-size: 1.5rem;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.notification-message {
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.auto-close-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.auto-close-progress {
+    height: 100%;
+    width: 100%;
+    border-radius: 2px;
+    transform-origin: left;
+    animation: shrink 2s linear forwards;
+}
+
+@keyframes shrink {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
