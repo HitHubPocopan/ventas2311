@@ -807,6 +807,125 @@ def health():
         "timestamp": datetime.now().isoformat()
     })
 
+ === RUTAS PARA ESTADÍSTICAS AVANZADAS ===
+
+@app.route('/estadisticas-avanzadas')
+@login_required
+def estadisticas_avanzadas():
+    """Obtener estadísticas avanzadas para el dashboard"""
+    if sistema is None:
+        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
+        
+    try:
+        terminal_id = request.args.get('terminal', 'TODAS')
+        
+        # Obtener todas las ventas según la terminal seleccionada
+        if terminal_id == "TODAS":
+            ventas = []
+            for terminal in ['POS1', 'POS2', 'POS3']:
+                ventas.extend(sistema.ventas_memory.get(terminal, []))
+        else:
+            ventas = sistema.ventas_memory.get(terminal_id, [])
+        
+        # Estadísticas básicas
+        fecha_hoy = date.today().strftime("%Y-%m-%d")
+        ventas_hoy = [v for v in ventas if v['Fecha'] == fecha_hoy]
+        ventas_totales = len(set(v['ID_Venta'] for v in ventas))
+        
+        # Calcular ingresos de hoy
+        ingresos_hoy = sum(v['Total_Venta'] for v in ventas_hoy)
+        
+        # Productos vendidos hoy
+        productos_vendidos_hoy = sum(v['Cantidad'] for v in ventas_hoy)
+        
+        # Productos más vendidos (top 5)
+        productos_ventas = {}
+        for venta in ventas:
+            producto = venta['Producto']
+            if producto in productos_ventas:
+                productos_ventas[producto] += venta['Cantidad']
+            else:
+                productos_ventas[producto] = venta['Cantidad']
+        
+        productos_mas_vendidos = sorted(
+            [{'producto': k, 'cantidad': v} for k, v in productos_ventas.items()],
+            key=lambda x: x['cantidad'],
+            reverse=True
+        )[:5]
+        
+        # Ventas por categoría
+        ventas_por_categoria = {}
+        for venta in ventas:
+            # Buscar categoría del producto
+            categoria = "Sin Categoría"
+            for producto in sistema.catalogo:
+                if producto['Nombre'] == venta['Producto']:
+                    categoria = producto['Categoría']
+                    break
+            
+            if categoria in ventas_por_categoria:
+                ventas_por_categoria[categoria] += 1
+            else:
+                ventas_por_categoria[categoria] = 1
+        
+        ventas_por_categoria_lista = [
+            {'categoria': k, 'ventas': v} 
+            for k, v in ventas_por_categoria.items()
+        ]
+        
+        # Actividad por hora (últimas 24 horas)
+        actividad_horaria = []
+        for hora in range(24):
+            hora_str = f"{hora:02d}:00"
+            ventas_hora = len([v for v in ventas_hoy if v['Hora'].startswith(f"{hora:02d}")])
+            actividad_horaria.append({'hora': hora_str, 'ventas': ventas_hora})
+        
+        # Calcular promedios (simulados por ahora)
+        promedio_ingresos_diarios = ingresos_hoy  # En un sistema real, se calcularía con histórico
+        promedio_ventas_diarias = len(ventas_hoy)  # En un sistema real, se calcularía con histórico
+        
+        # Últimas 20 transacciones
+        transacciones_recientes = sorted(
+            ventas,
+            key=lambda x: (x['Fecha'], x['Hora']),
+            reverse=True
+        )[:20]
+        
+        estadisticas = {
+            'ingresos_hoy': ingresos_hoy,
+            'productos_vendidos_hoy': productos_vendidos_hoy,
+            'promedio_ingresos_diarios': promedio_ingresos_diarios,
+            'promedio_ventas_diarias': promedio_ventas_diarias,
+            'total_transacciones': ventas_totales,
+            'productos_mas_vendidos': productos_mas_vendidos,
+            'ventas_por_categoria': ventas_por_categoria_lista,
+            'actividad_horaria': actividad_horaria
+        }
+        
+        return jsonify({
+            'success': True,
+            'estadisticas': estadisticas,
+            'transacciones': transacciones_recientes
+        })
+        
+    except Exception as e:
+        print(f"Error en estadísticas avanzadas: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error interno'}), 500
+
+@app.route('/reset-diario')
+@admin_required
+def reset_diario():
+    """Reset manual de estadísticas diarias (para pruebas)"""
+    try:
+        # En un sistema real, aquí se guardarían las estadísticas del día
+        # y se resetearían los contadores diarios
+        return jsonify({
+            'success': True,
+            'message': 'Reset diario ejecutado (simulado)'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return render_template('error.html', mensaje="Página no encontrada"), 404
