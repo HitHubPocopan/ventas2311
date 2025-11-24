@@ -5,6 +5,7 @@ import os
 import re
 from urllib.parse import unquote
 from functools import wraps
+import pandas as pd
 
 app = Flask(__name__)
 app.secret_key = 'pocopan_secure_key_2024_vercel_fixed'
@@ -38,7 +39,49 @@ class SistemaPocopan:
             "TODAS": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0}
         }
         
-        # Catálogo de productos
+        # Cargar catálogo desde Excel
+        self.catalogo = []
+        self.catalogo_cargado = False
+        self.productos_disponibles = []
+        
+        self.cargar_catalogo_desde_excel()
+        
+        print("✅ Sistema POCOPAN inicializado correctamente")
+
+    def cargar_catalogo_desde_excel(self):
+        """Carga el catálogo desde el archivo Excel"""
+        try:
+            # Leer el archivo Excel
+            df = pd.read_excel('catalogo.xlsx')
+            
+            # Limpiar y procesar los datos
+            self.catalogo = []
+            
+            for _, row in df.iterrows():
+                # Verificar que tenga los datos mínimos necesarios
+                if pd.notna(row['Nombre']) and pd.notna(row['Precio Venta']):
+                    producto = {
+                        'Nombre': str(row['Nombre']).strip(),
+                        'Categoría': str(row['Categoria']).strip() if pd.notna(row['Categoria']) else 'Sin Categoría',
+                        'Subcategoría': str(row['SubCAT']).strip() if pd.notna(row['SubCAT']) else '',
+                        'Precio Venta': float(row['Precio Venta']),
+                        'Proveedor': str(row.get('Proveedor', '')).strip() if pd.notna(row.get('Proveedor', '')) else 'Sin Proveedor',
+                        'Estado': 'Disponible'
+                    }
+                    self.catalogo.append(producto)
+            
+            self.catalogo_cargado = True
+            self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
+            
+            print(f"✅ Catálogo cargado: {len(self.catalogo)} productos")
+            
+        except Exception as e:
+            print(f"❌ Error cargando catálogo: {str(e)}")
+            # Si hay error, crear un catálogo mínimo de emergencia
+            self.crear_catalogo_emergencia()
+
+    def crear_catalogo_emergencia(self):
+        """Crea un catálogo mínimo en caso de error"""
         self.catalogo = [
             {
                 'Nombre': 'Cajas Verdes GRANJA ANIMALES DINOS',
@@ -55,36 +98,11 @@ class SistemaPocopan:
                 'Precio Venta': 30800, 
                 'Proveedor': 'Proveedor B', 
                 'Estado': 'Disponible'
-            },
-            {
-                'Nombre': 'Rompecabezas Tubo 150 PIEZAS', 
-                'Categoría': 'Ingenio', 
-                'Subcategoría': 'RompeCabezas',
-                'Precio Venta': 15000, 
-                'Proveedor': 'Proveedor C', 
-                'Estado': 'Disponible'
-            },
-            {
-                'Nombre': 'ABACO', 
-                'Categoría': 'Ingenio', 
-                'Subcategoría': 'Madera Ingenio',
-                'Precio Venta': 25000, 
-                'Proveedor': 'Proveedor A', 
-                'Estado': 'Disponible'
-            },
-            {
-                'Nombre': 'LIBRO MADERA', 
-                'Categoría': 'Libros', 
-                'Subcategoría': 'Libreria',
-                'Precio Venta': 15200, 
-                'Proveedor': 'Proveedor B', 
-                'Estado': 'Disponible'
             }
         ]
         self.catalogo_cargado = True
         self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
-        
-        print("✅ Sistema POCOPAN inicializado correctamente")
+        print("⚠️ Catálogo de emergencia cargado")
 
     def obtener_detalles_producto(self, producto_nombre):
         if not self.catalogo_cargado or not producto_nombre:
@@ -96,17 +114,38 @@ class SistemaPocopan:
             # Búsqueda exacta
             for producto in self.catalogo:
                 if producto['Nombre'] == nombre_limpio:
-                    return producto
+                    return {
+                        'nombre': producto['Nombre'],
+                        'precio': producto['Precio Venta'],
+                        'categoria': producto['Categoría'],
+                        'subcategoria': producto['Subcategoría'],
+                        'proveedor': producto['Proveedor'],
+                        'estado': producto['Estado']
+                    }
             
             # Búsqueda case-insensitive
             for producto in self.catalogo:
                 if producto['Nombre'].lower() == nombre_limpio.lower():
-                    return producto
+                    return {
+                        'nombre': producto['Nombre'],
+                        'precio': producto['Precio Venta'],
+                        'categoria': producto['Categoría'],
+                        'subcategoria': producto['Subcategoría'],
+                        'proveedor': producto['Proveedor'],
+                        'estado': producto['Estado']
+                    }
             
             # Búsqueda parcial
             for producto in self.catalogo:
                 if nombre_limpio.lower() in producto['Nombre'].lower():
-                    return producto
+                    return {
+                        'nombre': producto['Nombre'],
+                        'precio': producto['Precio Venta'],
+                        'categoria': producto['Categoría'],
+                        'subcategoria': producto['Subcategoría'],
+                        'proveedor': producto['Proveedor'],
+                        'estado': producto['Estado']
+                    }
             
             return None
             
@@ -150,22 +189,22 @@ class SistemaPocopan:
             except ValueError:
                 return False, "Cantidad inválida", carrito_actual
 
-            precio = float(detalles['Precio Venta'])
+            precio = float(detalles['precio'])
             if precio <= 0:
                 return False, "El producto no tiene precio válido", carrito_actual
 
             item = {
-                'producto': producto_nombre,
+                'producto': detalles['nombre'],
                 'cantidad': cantidad,
                 'precio': precio,
                 'subtotal': cantidad * precio,
-                'proveedor': detalles['Proveedor'],
-                'categoria': detalles['Categoría'],
+                'proveedor': detalles['proveedor'],
+                'categoria': detalles['categoria'],
                 'timestamp': datetime.now().isoformat()
             }
             
             carrito_actual.append(item)
-            return True, f"{producto_nombre} agregado al carrito", carrito_actual
+            return True, f"{detalles['nombre']} agregado al carrito", carrito_actual
             
         except Exception as e:
             return False, f"Error: {str(e)}", carrito_actual
@@ -416,7 +455,8 @@ def dashboard():
                            empresa=sistema.config['empresa'],
                            sistema=sistema,
                            rol_actual=rol,
-                           terminal_actual=terminal)
+                           terminal_actual=terminal,
+                           now=datetime.now())
 
 @app.route('/dashboard/<terminal_id>')
 @admin_required
@@ -435,7 +475,8 @@ def dashboard_terminal(terminal_id):
                            empresa=sistema.config['empresa'],
                            sistema=sistema,
                            rol_actual='admin',
-                           terminal_actual=terminal_id)
+                           terminal_actual=terminal_id,
+                           now=datetime.now())
 
 @app.route('/diagnostico')
 def diagnostico():
@@ -602,4 +643,3 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
-    
