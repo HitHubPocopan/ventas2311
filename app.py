@@ -620,6 +620,180 @@ def finalizar_venta():
     else:
         return jsonify({'success': False, 'message': result}), 400
 
+# === RUTAS DEL EDITOR DE CATÁLOGO ===
+@app.route('/editor-catalogo')
+@admin_required
+def editor_catalogo():
+    """Editor de catálogo solo para administradores"""
+    if sistema is None:
+        return render_template('error.html', mensaje="Sistema no disponible")
+    
+    return render_template('editor_catalogo.html', 
+                         sistema=sistema,
+                         catalogo=sistema.catalogo,
+                         usuario_actual=session.get('usuario'),
+                         rol_actual=session.get('rol'),
+                         terminal_actual=session.get('terminal'))
+
+@app.route('/obtener-producto/<path:producto_nombre>')
+@admin_required
+def obtener_producto(producto_nombre):
+    """Obtener detalles completos de un producto para editar"""
+    if sistema is None:
+        return jsonify({'error': 'Sistema no disponible'}), 500
+        
+    try:
+        producto_decodificado = unquote(producto_nombre)
+        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
+        
+        # Buscar producto en el catálogo
+        for producto in sistema.catalogo:
+            if producto['Nombre'] == producto_limpio:
+                return jsonify(producto)
+        
+        return jsonify({'error': 'Producto no encontrado'}), 404
+            
+    except Exception as e:
+        print(f"Error obteniendo producto: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+@app.route('/actualizar-producto', methods=['POST'])
+@admin_required
+def actualizar_producto():
+    """Actualizar un producto en el catálogo"""
+    if sistema is None:
+        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
+        
+    try:
+        data = request.get_json()
+        producto_original = data.get('producto_original', '').strip()
+        nuevo_nombre = data.get('nombre', '').strip()
+        nueva_categoria = data.get('categoria', '').strip()
+        nueva_subcategoria = data.get('subcategoria', '').strip()
+        nuevo_precio = data.get('precio_venta', 0)
+        nuevo_proveedor = data.get('proveedor', '').strip()
+        
+        if not producto_original or not nuevo_nombre:
+            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
+        
+        # Buscar y actualizar el producto
+        producto_encontrado = False
+        for producto in sistema.catalogo:
+            if producto['Nombre'] == producto_original:
+                # Actualizar datos
+                producto['Nombre'] = nuevo_nombre
+                producto['Categoría'] = nueva_categoria
+                producto['Subcategoría'] = nueva_subcategoria
+                producto['Precio Venta'] = float(nuevo_precio)
+                producto['Proveedor'] = nuevo_proveedor
+                producto_encontrado = True
+                break
+        
+        if producto_encontrado:
+            # Actualizar también la lista de productos disponibles
+            sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
+            
+            return jsonify({
+                'success': True,
+                'message': 'Producto actualizado correctamente',
+                'producto_actualizado': {
+                    'nombre': nuevo_nombre,
+                    'categoria': nueva_categoria,
+                    'subcategoria': nueva_subcategoria,
+                    'precio_venta': float(nuevo_precio),
+                    'proveedor': nuevo_proveedor
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
+            
+    except Exception as e:
+        print(f"Error actualizando producto: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+@app.route('/agregar-producto', methods=['POST'])
+@admin_required
+def agregar_producto():
+    """Agregar un nuevo producto al catálogo"""
+    if sistema is None:
+        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
+        
+    try:
+        data = request.get_json()
+        nombre = data.get('nombre', '').strip()
+        categoria = data.get('categoria', '').strip()
+        subcategoria = data.get('subcategoria', '').strip()
+        precio_venta = data.get('precio_venta', 0)
+        proveedor = data.get('proveedor', '').strip()
+        
+        if not nombre:
+            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
+        
+        # Verificar si el producto ya existe
+        for producto in sistema.catalogo:
+            if producto['Nombre'].lower() == nombre.lower():
+                return jsonify({'success': False, 'message': 'El producto ya existe'}), 400
+        
+        # Crear nuevo producto
+        nuevo_producto = {
+            'Nombre': nombre,
+            'Categoría': categoria,
+            'Subcategoría': subcategoria,
+            'Precio Venta': float(precio_venta),
+            'Proveedor': proveedor,
+            'Estado': 'Disponible'
+        }
+        
+        sistema.catalogo.append(nuevo_producto)
+        sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
+        
+        return jsonify({
+            'success': True,
+            'message': 'Producto agregado correctamente',
+            'nuevo_producto': nuevo_producto
+        })
+            
+    except Exception as e:
+        print(f"Error agregando producto: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+@app.route('/eliminar-producto', methods=['POST'])
+@admin_required
+def eliminar_producto():
+    """Eliminar un producto del catálogo"""
+    if sistema is None:
+        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
+        
+    try:
+        data = request.get_json()
+        producto_nombre = data.get('producto_nombre', '').strip()
+        
+        if not producto_nombre:
+            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
+        
+        # Buscar y eliminar el producto
+        producto_encontrado = False
+        for i, producto in enumerate(sistema.catalogo):
+            if producto['Nombre'] == producto_nombre:
+                sistema.catalogo.pop(i)
+                producto_encontrado = True
+                break
+        
+        if producto_encontrado:
+            # Actualizar también la lista de productos disponibles
+            sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
+            
+            return jsonify({
+                'success': True,
+                'message': 'Producto eliminado correctamente'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
+            
+    except Exception as e:
+        print(f"Error eliminando producto: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
 # Ruta para favicon para evitar errores 500
 @app.route('/favicon.ico')
 def favicon():
@@ -632,355 +806,6 @@ def health():
         "sistema": sistema is not None,
         "timestamp": datetime.now().isoformat()
     })
-
-# ... (después de las rutas existentes, antes de los error handlers)
-
-@app.route('/editor-catalogo')
-@admin_required
-def editor_catalogo():
-    """Editor de catálogo solo para administradores"""
-    if sistema is None:
-        return render_template('error.html', mensaje="Sistema no disponible")
-    
-    return render_template('editor_catalogo.html', 
-                         sistema=sistema,
-                         catalogo=sistema.catalogo,
-                         usuario_actual=session.get('usuario'),
-                         rol_actual=session.get('rol'),
-                         terminal_actual=session.get('terminal'))
-
-@app.route('/obtener-producto/<path:producto_nombre>')
-@admin_required
-def obtener_producto(producto_nombre):
-    """Obtener detalles completos de un producto para editar"""
-    if sistema is None:
-        return jsonify({'error': 'Sistema no disponible'}), 500
-        
-    try:
-        producto_decodificado = unquote(producto_nombre)
-        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
-        
-        # Buscar producto en el catálogo
-        for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_limpio:
-                return jsonify(producto)
-        
-        return jsonify({'error': 'Producto no encontrado'}), 404
-            
-    except Exception as e:
-        print(f"Error obteniendo producto: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
-
-@app.route('/actualizar-producto', methods=['POST'])
-@admin_required
-def actualizar_producto():
-    """Actualizar un producto en el catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        producto_original = data.get('producto_original', '').strip()
-        nuevo_nombre = data.get('nombre', '').strip()
-        nueva_categoria = data.get('categoria', '').strip()
-        nueva_subcategoria = data.get('subcategoria', '').strip()
-        nuevo_precio = data.get('precio_venta', 0)
-        nuevo_proveedor = data.get('proveedor', '').strip()
-        
-        if not producto_original or not nuevo_nombre:
-            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
-        
-        # Buscar y actualizar el producto
-        producto_encontrado = False
-        for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_original:
-                # Actualizar datos
-                producto['Nombre'] = nuevo_nombre
-                producto['Categoría'] = nueva_categoria
-                producto['Subcategoría'] = nueva_subcategoria
-                producto['Precio Venta'] = float(nuevo_precio)
-                producto['Proveedor'] = nuevo_proveedor
-                producto_encontrado = True
-                break
-        
-        if producto_encontrado:
-            # Actualizar también la lista de productos disponibles
-            sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
-            
-            return jsonify({
-                'success': True,
-                'message': 'Producto actualizado correctamente',
-                'producto_actualizado': {
-                    'nombre': nuevo_nombre,
-                    'categoria': nueva_categoria,
-                    'subcategoria': nueva_subcategoria,
-                    'precio_venta': float(nuevo_precio),
-                    'proveedor': nuevo_proveedor
-                }
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
-            
-    except Exception as e:
-        print(f"Error actualizando producto: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-@app.route('/agregar-producto', methods=['POST'])
-@admin_required
-def agregar_producto():
-    """Agregar un nuevo producto al catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        nombre = data.get('nombre', '').strip()
-        categoria = data.get('categoria', '').strip()
-        subcategoria = data.get('subcategoria', '').strip()
-        precio_venta = data.get('precio_venta', 0)
-        proveedor = data.get('proveedor', '').strip()
-        
-        if not nombre:
-            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
-        
-        # Verificar si el producto ya existe
-        for producto in sistema.catalogo:
-            if producto['Nombre'].lower() == nombre.lower():
-                return jsonify({'success': False, 'message': 'El producto ya existe'}), 400
-        
-        # Crear nuevo producto
-        nuevo_producto = {
-            'Nombre': nombre,
-            'Categoría': categoria,
-            'Subcategoría': subcategoria,
-            'Precio Venta': float(precio_venta),
-            'Proveedor': proveedor,
-            'Estado': 'Disponible'
-        }
-        
-        sistema.catalogo.append(nuevo_producto)
-        sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
-        
-        return jsonify({
-            'success': True,
-            'message': 'Producto agregado correctamente',
-            'nuevo_producto': nuevo_producto
-        })
-            
-    except Exception as e:
-        print(f"Error agregando producto: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-@app.route('/eliminar-producto', methods=['POST'])
-@admin_required
-def eliminar_producto():
-    """Eliminar un producto del catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        producto_nombre = data.get('producto_nombre', '').strip()
-        
-        if not producto_nombre:
-            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
-        
-        # Buscar y eliminar el producto
-        producto_encontrado = False
-        for i, producto in enumerate(sistema.catalogo):
-            if producto['Nombre'] == producto_nombre:
-                sistema.catalogo.pop(i)
-                producto_encontrado = True
-                break
-        
-        if producto_encontrado:
-            # Actualizar también la lista de productos disponibles
-            sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
-            
-            return jsonify({
-                'success': True,
-                'message': 'Producto eliminado correctamente'
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
-            
-    except Exception as e:
-        print(f"Error eliminando producto: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-# ... (el resto del código se mantiene igual)
-@app.route('/editor-catalogo')
-@admin_required
-def editor_catalogo():
-    """Editor de catálogo solo para administradores"""
-    if sistema is None:
-        return render_template('error.html', mensaje="Sistema no disponible")
-    
-    return render_template('editor_catalogo.html', 
-                         sistema=sistema,
-                         catalogo=sistema.catalogo,
-                         usuario_actual=session.get('usuario'),
-                         rol_actual=session.get('rol'),
-                         terminal_actual=session.get('terminal'))
-
-@app.route('/obtener-producto/<path:producto_nombre>')
-@admin_required
-def obtener_producto(producto_nombre):
-    """Obtener detalles completos de un producto para editar"""
-    if sistema is None:
-        return jsonify({'error': 'Sistema no disponible'}), 500
-        
-    try:
-        producto_decodificado = unquote(producto_nombre)
-        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
-        
-        # Buscar producto en el catálogo
-        for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_limpio:
-                return jsonify(producto)
-        
-        return jsonify({'error': 'Producto no encontrado'}), 404
-            
-    except Exception as e:
-        print(f"Error obteniendo producto: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
-
-@app.route('/actualizar-producto', methods=['POST'])
-@admin_required
-def actualizar_producto():
-    """Actualizar un producto en el catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        producto_original = data.get('producto_original', '').strip()
-        nuevo_nombre = data.get('nombre', '').strip()
-        nueva_categoria = data.get('categoria', '').strip()
-        nueva_subcategoria = data.get('subcategoria', '').strip()
-        nuevo_precio = data.get('precio_venta', 0)
-        nuevo_proveedor = data.get('proveedor', '').strip()
-        
-        if not producto_original or not nuevo_nombre:
-            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
-        
-        # Buscar y actualizar el producto
-        producto_encontrado = False
-        for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_original:
-                # Actualizar datos
-                producto['Nombre'] = nuevo_nombre
-                producto['Categoría'] = nueva_categoria
-                producto['Subcategoría'] = nueva_subcategoria
-                producto['Precio Venta'] = float(nuevo_precio)
-                producto['Proveedor'] = nuevo_proveedor
-                producto_encontrado = True
-                break
-        
-        if producto_encontrado:
-            # Actualizar también la lista de productos disponibles
-            sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
-            
-            return jsonify({
-                'success': True,
-                'message': 'Producto actualizado correctamente',
-                'producto_actualizado': {
-                    'nombre': nuevo_nombre,
-                    'categoria': nueva_categoria,
-                    'subcategoria': nueva_subcategoria,
-                    'precio_venta': float(nuevo_precio),
-                    'proveedor': nuevo_proveedor
-                }
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
-            
-    except Exception as e:
-        print(f"Error actualizando producto: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-@app.route('/agregar-producto', methods=['POST'])
-@admin_required
-def agregar_producto():
-    """Agregar un nuevo producto al catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        nombre = data.get('nombre', '').strip()
-        categoria = data.get('categoria', '').strip()
-        subcategoria = data.get('subcategoria', '').strip()
-        precio_venta = data.get('precio_venta', 0)
-        proveedor = data.get('proveedor', '').strip()
-        
-        if not nombre:
-            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
-        
-        # Verificar si el producto ya existe
-        for producto in sistema.catalogo:
-            if producto['Nombre'].lower() == nombre.lower():
-                return jsonify({'success': False, 'message': 'El producto ya existe'}), 400
-        
-        # Crear nuevo producto
-        nuevo_producto = {
-            'Nombre': nombre,
-            'Categoría': categoria,
-            'Subcategoría': subcategoria,
-            'Precio Venta': float(precio_venta),
-            'Proveedor': proveedor,
-            'Estado': 'Disponible'
-        }
-        
-        sistema.catalogo.append(nuevo_producto)
-        sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
-        
-        return jsonify({
-            'success': True,
-            'message': 'Producto agregado correctamente',
-            'nuevo_producto': nuevo_producto
-        })
-            
-    except Exception as e:
-        print(f"Error agregando producto: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-@app.route('/eliminar-producto', methods=['POST'])
-@admin_required
-def eliminar_producto():
-    """Eliminar un producto del catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        producto_nombre = data.get('producto_nombre', '').strip()
-        
-        if not producto_nombre:
-            return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
-        
-        # Buscar y eliminar el producto
-        producto_encontrado = False
-        for i, producto in enumerate(sistema.catalogo):
-            if producto['Nombre'] == producto_nombre:
-                sistema.catalogo.pop(i)
-                producto_encontrado = True
-                break
-        
-        if producto_encontrado:
-            # Actualizar también la lista de productos disponibles
-            sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
-            
-            return jsonify({
-                'success': True,
-                'message': 'Producto eliminado correctamente'
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
-            
-    except Exception as e:
-        print(f"Error eliminando producto: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.errorhandler(404)
 def not_found(error):
