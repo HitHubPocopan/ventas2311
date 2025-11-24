@@ -925,6 +925,133 @@ def health():
         "timestamp": datetime.now().isoformat()
     })
 
+# === RUTAS PARA ESTADÍSTICAS AVANZADAS ===
+
+@app.route('/estadisticas-avanzadas')
+@login_required
+def estadisticas_avanzadas():
+    """Obtener estadísticas avanzadas para el dashboard"""
+    if sistema is None:
+        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
+        
+    try:
+        terminal_id = request.args.get('terminal', 'TODAS')
+        
+        # Obtener todas las ventas según la terminal seleccionada
+        if terminal_id == "TODAS":
+            ventas = []
+            for terminal in ['POS1', 'POS2', 'POS3']:
+                ventas.extend(sistema.ventas_memory.get(terminal, []))
+        else:
+            ventas = sistema.ventas_memory.get(terminal_id, [])
+        
+        # Estadísticas básicas
+        fecha_hoy = date.today().strftime("%Y-%m-%d")
+        ventas_hoy = [v for v in ventas if v['Fecha'] == fecha_hoy]
+        ventas_totales = len(set(v['ID_Venta'] for v in ventas))
+        
+        # Calcular ingresos de hoy
+        ingresos_hoy = sum(v['Total_Venta'] for v in ventas_hoy)
+        
+        # Calcular monto histórico (todas las ventas)
+        monto_historico = sum(v['Total_Venta'] for v in ventas)
+        
+        # Productos vendidos hoy
+        productos_vendidos_hoy = sum(v['Cantidad'] for v in ventas_hoy)
+        
+        # Productos más vendidos (top 5) - SOLO HOY
+        productos_ventas_hoy = {}
+        for venta in ventas_hoy:
+            producto = venta['Producto']
+            if producto in productos_ventas_hoy:
+                productos_ventas_hoy[producto] += venta['Cantidad']
+            else:
+                productos_ventas_hoy[producto] = venta['Cantidad']
+        
+        productos_mas_vendidos = sorted(
+            [{'producto': k, 'cantidad': v} for k, v in productos_ventas_hoy.items()],
+            key=lambda x: x['cantidad'],
+            reverse=True
+        )[:5]
+        
+        # Calcular promedio diario (simulado - días con ventas)
+        dias_con_ventas = max(1, len(set(v['Fecha'] for v in ventas)))
+        promedio_diario = monto_historico / dias_con_ventas
+        
+        estadisticas = {
+            'ingresos_hoy': ingresos_hoy,
+            'productos_vendidos_hoy': productos_vendidos_hoy,
+            'monto_historico': monto_historico,
+            'promedio_diario': promedio_diario,
+            'transacciones_hoy_count': len(ventas_hoy),
+            'total_transacciones': ventas_totales
+        }
+        
+        return jsonify({
+            'success': True,
+            'estadisticas': estadisticas,
+            'transacciones_hoy': ventas_hoy,
+            'productos_mas_vendidos': productos_mas_vendidos
+        })
+        
+    except Exception as e:
+        print(f"Error en estadísticas avanzadas: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error interno'}), 500
+
+@app.route('/descargar-excel')
+@login_required
+def descargar_excel():
+    """Descargar todas las ventas en Excel"""
+    if sistema is None:
+        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
+        
+    try:
+        terminal_id = request.args.get('terminal', 'TODAS')
+        
+        # Obtener todas las ventas según la terminal seleccionada
+        if terminal_id == "TODAS":
+            ventas = []
+            for terminal in ['POS1', 'POS2', 'POS3']:
+                ventas.extend(sistema.ventas_memory.get(terminal, []))
+        else:
+            ventas = sistema.ventas_memory.get(terminal_id, [])
+        
+        # Crear DataFrame con todas las ventas
+        df_ventas = pd.DataFrame(ventas)
+        
+        # Crear archivo Excel en memoria
+        from io import BytesIO
+        output = BytesIO()
+        
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_ventas.to_excel(writer, sheet_name='Todas_las_Ventas', index=False)
+            
+            # Agregar resumen por día
+            if not df_ventas.empty:
+                df_ventas['Fecha'] = pd.to_datetime(df_ventas['Fecha'])
+                ventas_por_dia = df_ventas.groupby('Fecha').agg({
+                    'ID_Venta': 'nunique',
+                    'Total_Venta': 'sum',
+                    'Cantidad': 'sum'
+                }).reset_index()
+                ventas_por_dia.columns = ['Fecha', 'Transacciones', 'Ingresos_Totales', 'Productos_Vendidos']
+                ventas_por_dia.to_excel(writer, sheet_name='Resumen_Por_Dia', index=False)
+        
+        output.seek(0)
+        
+        # Crear respuesta con el archivo Excel
+        from flask import send_file
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'ventas_pocopan_{date.today().strftime("%Y-%m-%d")}.xlsx'
+        )
+        
+    except Exception as e:
+        print(f"Error generando Excel: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error al generar el archivo'}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return render_template('error.html', mensaje="Página no encontrada"), 404
