@@ -2,78 +2,80 @@
 
 {% block title %}Punto de Venta - POCOPAN{% endblock %}
 
-{% block page_title %}Punto de Venta{% endblock %}
-{% block page_subtitle %}Gestión en tiempo real • {{ id_cliente_actual }}{% endblock %}
-
 {% block content %}
-<div class="fade-in" style="height: 100%;">
-    <div style="display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; height: 100%;">
-        
+<div class="fade-in">
+    <!-- Header del POS -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1 style="color: var(--naranja-primario); margin-bottom: 0.3rem; font-size: 1.5rem;">Punto de Venta</h1>
+            <p style="color: var(--texto-gris); font-size: 0.9rem;">Gestión de ventas en tiempo real</p>
+        </div>
+        <div style="display: flex; gap: 0.8rem; align-items: center;">
+            <div class="user-badge">
+                <strong>Cliente Actual:</strong> {{ id_cliente_actual }}
+            </div>
+            <button onclick="limpiarCarrito()" class="btn btn-danger" {% if not carrito %}disabled{% endif %}>Limpiar Carrito</button>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem;">
         <!-- Sección de Productos -->
-        <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card">
             <div class="card-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Catálogo de Productos</span>
-                    <span style="background: #3498db; color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem;">
-                        {{ sistema.productos_disponibles|length }} productos
-                    </span>
+                    <span class="user-terminal">{{ sistema.productos_disponibles|length }} productos</span>
                 </div>
             </div>
-            
-            <div class="card-body" style="flex: 1; display: flex; flex-direction: column; padding: 0;">
-                <!-- Búsqueda -->
-                <div style="padding: 1.2rem; border-bottom: 1px solid #e9ecef;">
-                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem;">
-                        <div style="position: relative;">
-                            <input type="text" id="buscarProducto" class="form-control" 
-                                   placeholder="Buscar producto..." onkeyup="filtrarProductos()"
-                                   style="padding-left: 2.5rem;">
-                            <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #7f8c8d;">🔍</span>
-                        </div>
-                        
-                        <select id="filtroCategoria" class="form-control" onchange="filtrarProductos()" 
-                                style="min-width: 140px;">
-                            <option value="all">Todas las categorías</option>
-                            {% if sistema.catalogo_cargado %}
-                                {% set categorias_unicas = [] %}
-                                {% for producto in sistema.catalogo %}
-                                    {% if producto.Categoría and producto.Categoría not in categorias_unicas %}
-                                        {% set _ = categorias_unicas.append(producto.Categoría) %}
-                                        <option value="{{ producto.Categoría }}">{{ producto.Categoría }}</option>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                        </select>
+            <div class="card-body">
+                <!-- Búsqueda y Filtros -->
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.8rem; margin-bottom: 1rem;">
+                    <div style="position: relative;">
+                        <input type="text" id="buscarProducto" class="form-control" placeholder="Buscar producto..." 
+                               onkeyup="filtrarProductos()">
+                        <span style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--naranja-primario); font-size: 0.9rem;">🔍</span>
                     </div>
+                    
+                    <select id="filtroCategoria" class="form-control" onchange="filtrarProductos()" style="min-width: 140px; font-size: 0.85rem;">
+                        <option value="all">Todas las categorías</option>
+                        {% if sistema.catalogo_cargado %}
+                            {% set categorias_unicas = [] %}
+                            {% for producto in sistema.catalogo %}
+                                {% if producto.Categoría and producto.Categoría not in categorias_unicas %}
+                                    {% set _ = categorias_unicas.append(producto.Categoría) %}
+                                    <option value="{{ producto.Categoría }}">{{ producto.Categoría }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </select>
                 </div>
 
                 <!-- Lista de Productos -->
-                <div id="lista-productos" style="flex: 1; overflow-y: auto; padding: 1rem;">
+                <div id="lista-productos" class="scroll-container">
                     {% for producto in sistema.catalogo %}
                     <div class="producto-item" 
                          data-categoria="{{ producto.Categoría }}"
                          data-nombre="{{ producto.Nombre|lower }}"
-                         onclick="seleccionarProducto('{{ producto.Nombre }}')"
-                         style="border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; cursor: pointer; transition: all 0.3s ease;">
+                         onclick="seleccionarProducto('{{ producto.Nombre }}')">
                         
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div style="flex: 1;">
-                                <h3 style="color: #2c3e50; margin: 0 0 0.5rem 0; font-size: 0.95rem; line-height: 1.3;">
+                                <h3 style="color: var(--naranja-primario); margin: 0 0 0.3rem 0; font-size: 0.9rem; line-height: 1.2;">
                                     {{ producto.Nombre }}
                                 </h3>
-                                <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: #7f8c8d;">
-                                    <span>{{ producto.Categoría }}</span>
+                                <div style="display: flex; gap: 0.8rem; font-size: 0.75rem; color: var(--texto-gris); margin-bottom: 0.3rem;">
+                                    <span><strong>Categoría:</strong> {{ producto.Categoría }}</span>
                                     {% if producto.Subcategoría and producto.Subcategoría != '' %}
-                                    <span>• {{ producto.Subcategoría }}</span>
+                                    <span><strong>Sub:</strong> {{ producto.Subcategoría }}</span>
                                     {% endif %}
                                 </div>
                             </div>
                             <div style="text-align: right; min-width: 100px;">
-                                <div style="font-size: 1.1rem; font-weight: 600; color: #27ae60; margin-bottom: 0.5rem;">
+                                <div style="font-size: 1rem; font-weight: bold; color: var(--naranja-primario); margin-bottom: 0.3rem;">
                                     ${{ "%.2f"|format(producto['Precio Venta']) }}
                                 </div>
-                                <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
-                                    Agregar
+                                <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75rem; width: 100%;">
+                                    Agregar 
                                 </button>
                             </div>
                         </div>
@@ -81,110 +83,87 @@
                     {% endfor %}
                 </div>
 
-                <!-- Contador -->
-                <div style="padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa;">
-                    <div style="text-align: center;">
-                        <small style="color: #7f8c8d;">
-                            Mostrando <span id="contador-productos">{{ sistema.catalogo|length }}</span> productos
-                        </small>
-                    </div>
+                <!-- Contador de productos visibles -->
+                <div style="text-align: center; margin-top: 0.8rem; padding: 0.4rem; background: var(--naranja-fondo); border-radius: 4px;">
+                    <small style="color: var(--naranja-primario); font-size: 0.75rem;">
+                        Mostrando <span id="contador-productos">{{ sistema.catalogo|length }}</span> de {{ sistema.catalogo|length }} productos
+                    </small>
                 </div>
             </div>
         </div>
 
         <!-- Sección del Carrito -->
-        <div class="card" style="display: flex; flex-direction: column;">
+        <div class="card">
             <div class="card-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Carrito de Compra</span>
-                    <span style="background: #e74c3c; color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem;"
-                          id="contador-carrito">{{ carrito|length }} items</span>
+                    <span class="user-terminal" id="contador-carrito">{{ carrito|length }} items</span>
                 </div>
             </div>
-            
-            <div class="card-body" style="flex: 1; display: flex; flex-direction: column; padding: 0;">
-                <!-- Contenido del Carrito -->
-                <div id="carrito-contenido" style="flex: 1; overflow-y: auto; padding: 1.2rem;">
+            <div class="card-body">
+                <div id="carrito-contenido" class="scroll-container" style="max-height: 350px; margin-bottom: 1rem;">
                     {% if carrito %}
                         {% for item in carrito %}
-                        <div class="carrito-item" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+                        <div class="carrito-item">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3rem;">
                                 <div style="flex: 1;">
-                                    <h4 style="color: #2c3e50; margin: 0 0 0.3rem 0; font-size: 0.9rem;">{{ item.producto }}</h4>
-                                    <div style="font-size: 0.75rem; color: #7f8c8d;">
+                                    <h4 style="color: var(--texto-oscuro); margin: 0 0 0.2rem 0; font-size: 0.8rem; line-height: 1.1;">{{ item.producto }}</h4>
+                                    <div style="font-size: 0.7rem; color: var(--texto-gris);">
                                         {{ item.categoria }}
                                     </div>
                                 </div>
-                                <button onclick="eliminarDelCarrito({{ loop.index0 }})" 
-                                        class="btn btn-danger" 
-                                        style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">
-                                    ×
-                                </button>
+                                <button onclick="eliminarDelCarrito({{ loop.index0 }})" class="btn btn-danger" style="padding: 2px 4px; margin-left: 6px; font-size: 0.65rem; min-width: 18px;">×</button>
                             </div>
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.8rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.75rem;">
                                 <div>
                                     <strong>Precio:</strong><br>
-                                    <span style="color: #27ae60;">${{ "%.2f"|format(item.precio) }}</span>
+                                    ${{ "%.2f"|format(item.precio) }}
                                 </div>
                                 <div>
                                     <strong>Cantidad:</strong><br>
                                     <input type="number" value="{{ item.cantidad }}" min="1" max="100" 
                                            onchange="actualizarCantidad({{ loop.index0 }}, this.value)"
-                                           style="width: 70px; padding: 0.3rem; border: 1px solid #ddd; border-radius: 4px;">
+                                           style="width: 50px; padding: 2px 4px; border: 1px solid var(--naranja-borde); border-radius: 4px; font-size: 0.75rem;">
                                 </div>
                             </div>
-                            
-                            <div style="text-align: right; margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid #f1f1f1;">
-                                <strong style="color: #2c3e50;">Subtotal: ${{ "%.2f"|format(item.subtotal) }}</strong>
+                            <div style="text-align: right; margin-top: 0.3rem; font-size: 0.8rem;">
+                                <strong style="color: var(--naranja-primario);">Subtotal: ${{ "%.2f"|format(item.subtotal) }}</strong>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div style="text-align: center; padding: 3rem 1rem; color: #bdc3c7;">
-                            <div style="font-size: 3rem; margin-bottom: 1rem;">🛒</div>
-                            <p style="font-weight: 500; margin-bottom: 0.5rem;">Carrito vacío</p>
-                            <p style="font-size: 0.9rem;">Agrega productos desde el catálogo</p>
+                        <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                            <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">🛒</div>
+                            <p style="font-size: 0.8rem; margin-bottom: 0.2rem;">El carrito está vacío</p>
+                            <p style="font-size: 0.7rem;">Agrega productos desde la lista</p>
                         </div>
                     {% endif %}
                 </div>
 
-                <!-- Totales y Acciones -->
-                <div style="padding: 1.2rem; border-top: 1px solid #e9ecef; background: #f8f9fa;">
-                    <!-- Totales -->
-                    <div style="margin-bottom: 1rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                            <span>Subtotal:</span>
-                            <strong id="subtotal-display">${{ "%.2f"|format(totales.subtotal) }}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                            <span>IVA ({{ totales.porcentaje_iva }}%):</span>
-                            <strong id="iva-display">${{ "%.2f"|format(totales.iva) }}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 600; 
-                                  padding-top: 0.5rem; border-top: 1px solid #ddd;">
-                            <span>Total:</span>
-                            <strong id="total-display" style="color: #e74c3c;">${{ "%.2f"|format(totales.total) }}</strong>
-                        </div>
+                <!-- Totales -->
+                <div style="border-top: 1px solid var(--naranja-borde); padding-top: 0.8rem; margin-top: 0.8rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.8rem;">
+                        <span>Subtotal:</span>
+                        <strong id="subtotal-display">${{ "%.2f"|format(totales.subtotal) }}</strong>
                     </div>
-
-                    <!-- Botones -->
-                    <div style="display: flex; gap: 0.8rem;">
-                        <button onclick="limpiarCarrito()" 
-                                class="btn btn-outline" 
-                                style="flex: 1; padding: 0.8rem;"
-                                {% if not carrito %}disabled{% endif %}>
-                            Limpiar
-                        </button>
-                        <button id="btn-finalizar-venta" 
-                                onclick="finalizarVenta()" 
-                                class="btn btn-primary" 
-                                style="flex: 2; padding: 0.8rem; font-weight: 600;"
-                                {% if not carrito %}disabled{% endif %}>
-                            🎯 Finalizar Venta
-                        </button>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.8rem;">
+                        <span>IVA ({{ totales.porcentaje_iva }}%):</span>
+                        <strong id="iva-display">${{ "%.2f"|format(totales.iva) }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: bold; border-top: 1px solid var(--naranja-borde); padding-top: 0.4rem;">
+                        <span>Total:</span>
+                        <strong id="total-display" style="color: var(--naranja-primario);">${{ "%.2f"|format(totales.total) }}</strong>
                     </div>
                 </div>
+
+                <!-- Botón Finalizar Venta -->
+                <button id="btn-finalizar-venta" 
+                        onclick="finalizarVenta()" 
+                        class="btn btn-primary" 
+                        style="width: 100%; padding: 8px; font-size: 0.9rem; margin-top: 0.8rem; font-weight: 600;"
+                        {% if not carrito %}disabled{% endif %}>
+                    🎯 Finalizar Venta
+                </button>
             </div>
         </div>
     </div>
@@ -213,6 +192,7 @@
 
 {% block scripts %}
 <script>
+    // Los scripts se mantienen igual, solo cambia el estilo
     let productoSeleccionado = null;
 
     // Filtrado de productos
@@ -268,8 +248,8 @@
         const contenido = document.getElementById('detalles-producto');
         
         contenido.innerHTML = `
-            <h3 style="color: #2c3e50; margin-bottom: 0.8rem; font-size: 1rem;">${detalles.nombre}</h3>
-            <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 6px; margin-bottom: 0.8rem;">
+            <h3 style="color: var(--naranja-primario); margin-bottom: 0.8rem; font-size: 1rem;">${detalles.nombre}</h3>
+            <div style="background: var(--naranja-fondo); padding: 0.8rem; border-radius: 6px; margin-bottom: 0.8rem;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.8rem;">
                     <div><strong>Precio:</strong> $${detalles.precio.toFixed(2)}</div>
                     <div><strong>Categoría:</strong> ${detalles.categoria || 'N/A'}</div>
@@ -339,7 +319,7 @@
     }
 
     function eliminarDelCarrito(index) {
-        if (!confirm('¿Estás seguro de eliminar este producto del carrito?')) {
+        if (!confirmAction('¿Estás seguro de eliminar este producto del carrito?')) {
             return;
         }
 
@@ -378,7 +358,7 @@
     }
 
     function limpiarCarrito() {
-        if (!confirm('¿Estás seguro de limpiar todo el carrito?')) {
+        if (!confirmAction('¿Estás seguro de limpiar todo el carrito?')) {
             return;
         }
 
@@ -406,7 +386,7 @@
     }
 
     function finalizarVenta() {
-        if (!confirm('¿Finalizar venta?')) {
+        if (!confirmAction('¿Finalizar venta?')) {
             return;
         }
 
@@ -448,36 +428,30 @@
                 let html = '';
                 data.carrito.forEach((item, index) => {
                     html += `
-                        <div class="carrito-item" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+                        <div class="carrito-item">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3rem;">
                                 <div style="flex: 1;">
-                                    <h4 style="color: #2c3e50; margin: 0 0 0.3rem 0; font-size: 0.9rem;">${item.producto}</h4>
-                                    <div style="font-size: 0.75rem; color: #7f8c8d;">
+                                    <h4 style="color: var(--texto-oscuro); margin: 0 0 0.2rem 0; font-size: 0.8rem; line-height: 1.1;">${item.producto}</h4>
+                                    <div style="font-size: 0.7rem; color: var(--texto-gris);">
                                         ${item.categoria}
                                     </div>
                                 </div>
-                                <button onclick="eliminarDelCarrito(${index})" 
-                                        class="btn btn-danger" 
-                                        style="padding: 0.3rem 0.6rem; font-size: 0.7rem;">
-                                    ×
-                                </button>
+                                <button onclick="eliminarDelCarrito(${index})" class="btn btn-danger" style="padding: 2px 4px; margin-left: 6px; font-size: 0.65rem; min-width: 18px;">×</button>
                             </div>
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.8rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 0.75rem;">
                                 <div>
                                     <strong>Precio:</strong><br>
-                                    <span style="color: #27ae60;">$${item.precio.toFixed(2)}</span>
+                                    $${item.precio.toFixed(2)}
                                 </div>
                                 <div>
                                     <strong>Cantidad:</strong><br>
                                     <input type="number" value="${item.cantidad}" min="1" max="100" 
                                            onchange="actualizarCantidad(${index}, this.value)"
-                                           style="width: 70px; padding: 0.3rem; border: 1px solid #ddd; border-radius: 4px;">
+                                           style="width: 50px; padding: 2px 4px; border: 1px solid var(--naranja-borde); border-radius: 4px; font-size: 0.75rem;">
                                 </div>
                             </div>
-                            
-                            <div style="text-align: right; margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid #f1f1f1;">
-                                <strong style="color: #2c3e50;">Subtotal: $${item.subtotal.toFixed(2)}</strong>
+                            <div style="text-align: right; margin-top: 0.3rem; font-size: 0.8rem;">
+                                <strong style="color: var(--naranja-primario);">Subtotal: $${item.subtotal.toFixed(2)}</strong>
                             </div>
                         </div>
                     `;
@@ -485,10 +459,10 @@
                 carritoContenido.innerHTML = html;
             } else {
                 carritoContenido.innerHTML = `
-                    <div style="text-align: center; padding: 3rem 1rem; color: #bdc3c7;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">🛒</div>
-                        <p style="font-weight: 500; margin-bottom: 0.5rem;">Carrito vacío</p>
-                        <p style="font-size: 0.9rem;">Agrega productos desde el catálogo</p>
+                    <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">🛒</div>
+                        <p style="font-size: 0.8rem; margin-bottom: 0.2rem;">El carrito está vacío</p>
+                        <p style="font-size: 0.7rem;">Agrega productos desde la lista</p>
                     </div>
                 `;
             }
@@ -527,3 +501,4 @@
     });
 </script>
 {% endblock %}
+
