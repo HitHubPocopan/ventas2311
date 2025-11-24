@@ -1,3 +1,5 @@
+# [file name]: app.py
+# [file content begin]
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import pandas as pd
 from datetime import datetime, date
@@ -7,6 +9,7 @@ from werkzeug.utils import secure_filename
 import numpy as np
 from urllib.parse import unquote
 import re
+from functools import wraps
 
 # --- CONFIGURACIÓN ---
 app = Flask(__name__)
@@ -17,10 +20,26 @@ class Config:
     ARCHIVO_VENTAS = 'ventas.xlsx' 
     ARCHIVO_CONFIG = 'config.json'
     ARCHIVO_CONTADORES = 'contadores.json'
-    ID_TERMINAL_ACTUAL = os.environ.get('TERMINAL_ID', 'TERMINAL_1')
     MAX_CARRITO_ITEMS = 50
 
 app.config.from_object(Config)
+
+# --- DECORADORES DE AUTENTICACIÓN ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario' not in session or session.get('rol') != 'admin':
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # --- SISTEMA PRINCIPAL ---
 class SistemaPocopan:
@@ -57,7 +76,13 @@ class SistemaPocopan:
             "empresa": "POCOPAN",
             "backup_automatico": False, 
             "mostrar_estadisticas_inicio": True,
-            "max_items_carrito": 50
+            "max_items_carrito": 50,
+            "usuarios": {
+                "admin": {"password": "admin123", "rol": "admin", "terminal": "TODAS"},
+                "pos1": {"password": "pos1123", "rol": "pos", "terminal": "POS1"},
+                "pos2": {"password": "pos2123", "rol": "pos", "terminal": "POS2"},
+                "pos3": {"password": "pos3123", "rol": "pos", "terminal": "POS3"}
+            }
         }
         try:
             if os.path.exists(app.config['ARCHIVO_CONFIG']):
@@ -71,38 +96,50 @@ class SistemaPocopan:
             self.config = config_default
 
     def cargar_contadores(self):
-        contadores_default = {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0}
+        contadores_default = {
+            "POS1": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
+            "POS2": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
+            "POS3": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
+            "TODAS": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0}
+        }
         try:
             if os.path.exists(app.config['ARCHIVO_CONTADORES']):
                 with open(app.config['ARCHIVO_CONTADORES'], 'r', encoding='utf-8') as f:
-                    contadores = json.load(f)
-                    self.contador_clientes = contadores.get("ultimo_cliente", 0) + 1
+                    self.contadores = json.load(f)
             else:
-                self.contador_clientes = 1
+                self.contadores = contadores_default
         except Exception as e:
             print(f"Error cargando contadores: {e}")
-            self.contador_clientes = 1
+            self.contadores = contadores_default
 
     def cargar_ventas(self):
         try:
             if os.path.exists(app.config['ARCHIVO_VENTAS']):
-                self.df_ventas = pd.read_excel(app.config['ARCHIVO_VENTAS'])
-                columnas_requeridas = ['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
-                                       'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal']
-                for col in columnas_requeridas:
-                    if col not in self.df_ventas.columns:
-                        self.df_ventas[col] = ''
+                # Cargar todas las hojas
+                self.df_ventas = {}
+                xl_file = pd.ExcelFile(app.config['ARCHIVO_VENTAS'])
+                for sheet_name in xl_file.sheet_names:
+                    self.df_ventas[sheet_name] = pd.read_excel(app.config['ARCHIVO_VENTAS'], sheet_name=sheet_name)
+                    
+                    columnas_requeridas = ['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
+                                           'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal']
+                    for col in columnas_requeridas:
+                        if col not in self.df_ventas[sheet_name].columns:
+                            self.df_ventas[sheet_name][col] = ''
             else:
-                self.df_ventas = pd.DataFrame(columns=[
-                    'ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
-                    'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal'
-                ])
+                # Inicializar con hojas vacías
+                self.df_ventas = {}
+                columnas = ['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
+                            'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal']
+                for sheet in ['POS1', 'POS2', 'POS3', 'TODAS']:
+                    self.df_ventas[sheet] = pd.DataFrame(columns=columnas)
         except Exception as e:
             print(f"Error cargando ventas: {e}")
-            self.df_ventas = pd.DataFrame(columns=[
-                'ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
-                'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal'
-            ])
+            self.df_ventas = {}
+            columnas = ['ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto', 
+                        'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal']
+            for sheet in ['POS1', 'POS2', 'POS3', 'TODAS']:
+                self.df_ventas[sheet] = pd.DataFrame(columns=columnas)
     
     def cargar_catalogo_automatico(self):
         archivos_posibles = ["catalogo.xlsx", "Pocopan.xlsx", "Pocopan (1).xlsx"]
@@ -114,201 +151,26 @@ class SistemaPocopan:
                     return
         print("No se encontró archivo de catálogo")
 
-    def cargar_catalogo(self, archivo_path):
-        try:
-            self.df_catalogo = pd.read_excel(archivo_path, sheet_name=0)
-            self.df_catalogo.columns = [str(col).strip() for col in self.df_catalogo.columns]
-            
-            rename_map = {}
-            if 'Categoria' in self.df_catalogo.columns:
-                rename_map['Categoria'] = 'Categoría'
-            if 'SubCAT' in self.df_catalogo.columns:
-                rename_map['SubCAT'] = 'Subcategoría'
-            if 'Precio Venta' not in self.df_catalogo.columns and 'Precio_Venta' in self.df_catalogo.columns:
-                rename_map['Precio_Venta'] = 'Precio Venta'
-            
-            if rename_map:
-                self.df_catalogo.rename(columns=rename_map, inplace=True)
-            
-            columnas_requeridas = ['Nombre', 'Precio Venta', 'Categoría', 'Proveedor', 'Estado', 'Subcategoría']
-            for col in columnas_requeridas:
-                if col not in self.df_catalogo.columns:
-                    self.df_catalogo[col] = ''
+    # ... (mantener todos los métodos existentes de cargar_catalogo, obtener_detalles_producto, buscar_productos, etc.)
 
-            if 'Precio Venta' in self.df_catalogo.columns:
-                self.df_catalogo['Precio Venta'] = pd.to_numeric(
-                    self.df_catalogo['Precio Venta'], errors='coerce'
-                ).fillna(0)
-            
-            self.catalogo_cargado = True
-            self.productos_disponibles = self.df_catalogo[
-                (self.df_catalogo['Estado'] == 'Disponible') | 
-                (self.df_catalogo['Estado'].isna())
-            ]['Nombre'].dropna().unique().tolist()
-            
-            return True, f"{len(self.df_catalogo)} productos cargados"
-            
-        except Exception as e:
-            self.df_catalogo = None
-            self.catalogo_cargado = False
-            self.productos_disponibles = []
-            return False, f"Error: {str(e)}"
-    
-    def obtener_detalles_producto(self, producto_nombre):
-        if not self.catalogo_cargado or not producto_nombre or self.df_catalogo is None:
-            return None
-        
-        try:
-            nombre_limpio = re.sub(r'\s+', ' ', producto_nombre).strip()
-            
-            producto_exacto = self.df_catalogo[self.df_catalogo['Nombre'] == nombre_limpio]
-            
-            if not producto_exacto.empty:
-                producto = producto_exacto.iloc[0]
-            else:
-                producto_insensitive = self.df_catalogo[
-                    self.df_catalogo['Nombre'].str.strip().str.lower() == nombre_limpio.lower()
-                ]
-                
-                if not producto_insensitive.empty:
-                    producto = producto_insensitive.iloc[0]
-                else:
-                    producto_parcial = self.df_catalogo[
-                        self.df_catalogo['Nombre'].str.contains(nombre_limpio, case=False, na=False)
-                    ]
-                    
-                    if not producto_parcial.empty:
-                        producto = producto_parcial.iloc[0]
-                    else:
-                        return None
-            
-            detalles = {
-                'nombre': producto.get('Nombre', nombre_limpio),
-                'precio': float(producto.get('Precio Venta', 0)),
-                'proveedor': producto.get('Proveedor', ''),
-                'categoria': producto.get('Categoría', ''),
-                'estado': producto.get('Estado', 'Disponible'),
-                'subcategoria': producto.get('Subcategoría', '')
-            }
-            
-            return detalles
-            
-        except Exception as e:
-            print(f"Error obteniendo detalles: {str(e)}")
-            return None
-
-    def buscar_productos(self, query, limit=10):
-        if not self.catalogo_cargado or not query or self.df_catalogo is None:
-            return []
-        
-        query = query.lower().strip()
-        if len(query) < 2:
-            return []
-        
-        try:
-            productos_filtrados = [
-                producto for producto in self.productos_disponibles 
-                if query in producto.lower()
-            ][:limit]
-            return productos_filtrados
-        except Exception:
-            return []
-
-    def validar_carrito(self, carrito_actual):
-        if len(carrito_actual) >= self.config.get('max_items_carrito', 50):
-            return False, "Límite de items en carrito alcanzado"
-        return True, "OK"
-
-    def agregar_al_carrito(self, carrito_actual, producto_nombre, cantidad):
-        try:
-            self._wait_for_unlock()
-            
-            valid, msg = self.validar_carrito(carrito_actual)
-            if not valid:
-                return False, msg, carrito_actual
-
-            detalles = self.obtener_detalles_producto(producto_nombre)
-            if not detalles:
-                return False, "Producto no encontrado", carrito_actual
-
-            try:
-                cantidad = int(cantidad)
-                if cantidad <= 0:
-                    return False, "La cantidad debe ser mayor a 0", carrito_actual
-                if cantidad > 100:
-                    return False, "Cantidad excede el límite permitido", carrito_actual
-            except ValueError:
-                return False, "Cantidad inválida", carrito_actual
-
-            precio = float(detalles['precio'])
-            if precio <= 0:
-                return False, "El producto no tiene precio válido", carrito_actual
-
-            item = {
-                'producto': producto_nombre,
-                'cantidad': cantidad,
-                'precio': precio,
-                'subtotal': cantidad * precio,
-                'proveedor': detalles['proveedor'],
-                'categoria': detalles['categoria'],
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            carrito_actual.append(item)
-            return True, f"{producto_nombre} agregado al carrito", carrito_actual
-            
-        except Exception as e:
-            return False, f"Error: {str(e)}", carrito_actual
-        finally:
-            self._release_lock()
-    
-    def eliminar_del_carrito(self, carrito_actual, index):
-        try:
-            index = int(index)
-            if 0 <= index < len(carrito_actual):
-                producto_eliminado = carrito_actual[index]['producto']
-                carrito_actual.pop(index)
-                return True, f"{producto_eliminado} eliminado", carrito_actual
-            else:
-                return False, "Índice inválido", carrito_actual
-        except (ValueError, IndexError):
-            return False, "Índice inválido", carrito_actual
-    
-    def limpiar_carrito(self, carrito_actual):
-        carrito_actual.clear()
-        return True, "Carrito limpiado", carrito_actual
-    
-    def calcular_totales(self, carrito_actual):
-        try:
-            subtotal = sum(item.get('subtotal', 0) for item in carrito_actual)
-            iva_porcentaje = self.config.get('iva', 21)
-            iva = subtotal * (iva_porcentaje / 100)
-            total = subtotal + iva
-            
-            return {
-                'subtotal': max(0, subtotal),
-                'iva': max(0, iva),
-                'total': max(0, total),
-                'porcentaje_iva': iva_porcentaje
-            }
-        except Exception:
-            return {'subtotal': 0, 'iva': 0, 'total': 0, 'porcentaje_iva': self.config.get('iva', 21)}
-
-    def finalizar_venta(self, carrito_actual):
+    def finalizar_venta(self, carrito_actual, terminal_id):
         if not carrito_actual:
             return False, "El carrito está vacío"
         
         try:
             self._wait_for_unlock()
             
-            id_cliente = self.contador_clientes
+            # Usar contadores específicos del terminal
+            id_cliente = self.contadores[terminal_id]["ultimo_cliente"] + 1
             fecha = date.today().strftime("%Y-%m-%d")
             hora = datetime.now().strftime("%H:%M:%S")
             
-            if self.df_ventas.empty or 'ID_Venta' not in self.df_ventas.columns:
+            # Obtener último ID_Venta del terminal específico
+            df_terminal = self.df_ventas.get(terminal_id, pd.DataFrame())
+            if df_terminal.empty or 'ID_Venta' not in df_terminal.columns:
                 id_venta = 1
             else:
-                id_venta = int(self.df_ventas['ID_Venta'].max() or 0) + 1
+                id_venta = int(df_terminal['ID_Venta'].max() or 0) + 1
             
             nuevas_ventas = []
             for item in carrito_actual:
@@ -316,28 +178,37 @@ class SistemaPocopan:
                     'ID_Venta': id_venta,
                     'Fecha': fecha,
                     'Hora': hora,
-                    'ID_Cliente': f"CLIENTE-{id_cliente:04d}",
+                    'ID_Cliente': f"CLIENTE-{terminal_id}-{id_cliente:04d}",
                     'Producto': item['producto'],
                     'Cantidad': item['cantidad'],
                     'Precio_Unitario': item['precio'],
                     'Total_Venta': item['subtotal'],
-                    'Vendedor': 'Sistema Web POCOPAN',
-                    'ID_Terminal': app.config['ID_TERMINAL_ACTUAL']
+                    'Vendedor': f'POS {terminal_id}',
+                    'ID_Terminal': terminal_id
                 }
                 nuevas_ventas.append(nueva_venta)
             
             nuevas_ventas_df = pd.DataFrame(nuevas_ventas)
-            self.df_ventas = pd.concat([self.df_ventas, nuevas_ventas_df], ignore_index=True)
+            
+            # Guardar en la hoja del terminal específico
+            self.df_ventas[terminal_id] = pd.concat([self.df_ventas[terminal_id], nuevas_ventas_df], ignore_index=True)
+            
+            # También guardar en la hoja TODAS
+            self.df_ventas['TODAS'] = pd.concat([self.df_ventas['TODAS'], nuevas_ventas_df], ignore_index=True)
             
             self.guardar_ventas()
+            
+            # Actualizar contadores del terminal
+            self.contadores[terminal_id]["ultimo_cliente"] = id_cliente
+            self.contadores[terminal_id]["ultima_venta"] = id_venta
+            self.contadores[terminal_id]["total_ventas"] += 1
             self.guardar_contadores()
             
             totales = self.calcular_totales(carrito_actual)
-            self.contador_clientes += 1
             
             return True, {
                 'id_venta': id_venta,
-                'id_cliente': f"CLIENTE-{id_cliente:04d}",
+                'id_cliente': f"CLIENTE-{terminal_id}-{id_cliente:04d}",
                 'total_productos': len(nuevas_ventas),
                 'totales': totales,
                 'fecha': fecha,
@@ -352,7 +223,9 @@ class SistemaPocopan:
     def guardar_ventas(self):
         try:
             if os.environ.get('VERCEL') != '1':
-                self.df_ventas.to_excel(app.config['ARCHIVO_VENTAS'], index=False, engine='openpyxl')
+                with pd.ExcelWriter(app.config['ARCHIVO_VENTAS'], engine='openpyxl') as writer:
+                    for sheet_name, df in self.df_ventas.items():
+                        df.to_excel(writer, sheet_name=sheet_name, index=False)
             return True
         except Exception as e:
             print(f"Error guardando ventas: {e}")
@@ -361,13 +234,8 @@ class SistemaPocopan:
     def guardar_contadores(self):
         try:
             if os.environ.get('VERCEL') != '1':
-                contadores = {
-                    "ultimo_cliente": self.contador_clientes - 1,
-                    "ultima_venta": self.df_ventas['ID_Venta'].max() if not self.df_ventas.empty else 0,
-                    "total_ventas": len(self.df_ventas['ID_Venta'].unique()) if not self.df_ventas.empty else 0
-                }
                 with open(app.config['ARCHIVO_CONTADORES'], 'w', encoding='utf-8') as f:
-                    json.dump(contadores, f, indent=4)
+                    json.dump(self.contadores, f, indent=4)
             return True
         except Exception as e:
             print(f"Error guardando contadores: {e}")
@@ -375,25 +243,30 @@ class SistemaPocopan:
 
     def obtener_estadisticas_dashboard(self, terminal_id=None):
         try:
-            if self.df_ventas.empty:
-                return self._estadisticas_vacias(terminal_id)
+            if terminal_id == "TODAS" or terminal_id is None:
+                # Estadísticas consolidadas
+                ventas_consolidadas = pd.DataFrame()
+                for sheet in ['POS1', 'POS2', 'POS3']:
+                    if sheet in self.df_ventas:
+                        ventas_consolidadas = pd.concat([ventas_consolidadas, self.df_ventas[sheet]])
+                ventas = ventas_consolidadas
+                terminal_nombre = "General (Todas las Terminales)"
+            else:
+                # Estadísticas de terminal específico
+                ventas = self.df_ventas.get(terminal_id, pd.DataFrame())
+                terminal_nombre = f"Terminal {terminal_id}"
                 
-            ventas = self.df_ventas.copy()
+            if ventas.empty:
+                return self._estadisticas_vacias(terminal_nombre)
+                
             ventas['Total_Venta'] = pd.to_numeric(ventas['Total_Venta'], errors='coerce').fillna(0)
             
-            if terminal_id:
-                ventas_filtradas = ventas[ventas['ID_Terminal'] == terminal_id]
-                terminal_nombre = terminal_id 
-            else:
-                ventas_filtradas = ventas
-                terminal_nombre = "General"
-                
-            ventas_hoy = ventas_filtradas[
-                ventas_filtradas['Fecha'] == date.today().strftime("%Y-%m-%d")
+            ventas_hoy = ventas[
+                ventas['Fecha'] == date.today().strftime("%Y-%m-%d")
             ]
             
-            total_ventas = len(ventas_filtradas.drop_duplicates(subset=['ID_Venta']))
-            ingresos_totales = ventas_filtradas['Total_Venta'].sum()
+            total_ventas = len(ventas.drop_duplicates(subset=['ID_Venta']))
+            ingresos_totales = ventas['Total_Venta'].sum()
             ventas_hoy_count = len(ventas_hoy.drop_duplicates(subset=['ID_Venta']))
             
             productos_disponibles = len(self.df_catalogo) if self.df_catalogo is not None else 0
@@ -404,23 +277,28 @@ class SistemaPocopan:
                 'productos_catalogo': productos_disponibles,
                 'usuarios_activos': 1,
                 'ventas_hoy_count': ventas_hoy_count,
-                'dashboard_nombre': f"Dashboard - POCOPAN {terminal_nombre}",
-                'terminal_actual': app.config['ID_TERMINAL_ACTUAL']
+                'dashboard_nombre': f"Dashboard - {terminal_nombre}",
+                'terminal_actual': terminal_id or "TODAS"
             }
         except Exception:
-            return self._estadisticas_vacias(terminal_id)
+            return self._estadisticas_vacias(terminal_id or "TODAS")
 
-    def _estadisticas_vacias(self, terminal_id):
-        terminal_nombre = terminal_id or "General"
+    def _estadisticas_vacias(self, terminal_nombre):
         return {
             'ventas_totales': 0,
             'ingresos_totales': f"{self.config['moneda']}0.00",
             'productos_catalogo': len(self.df_catalogo) if self.df_catalogo is not None else 0,
             'usuarios_activos': 1,
             'ventas_hoy_count': 0,
-            'dashboard_nombre': f"Dashboard - POCOPAN {terminal_nombre}",
-            'terminal_actual': app.config['ID_TERMINAL_ACTUAL']
+            'dashboard_nombre': f"Dashboard - {terminal_nombre}",
+            'terminal_actual': "TODAS"
         }
+
+    def obtener_estadisticas_por_terminal(self):
+        stats = {}
+        for terminal in ['POS1', 'POS2', 'POS3']:
+            stats[terminal] = self.obtener_estadisticas_dashboard(terminal)
+        return stats
 
 # Instancia global
 try:
@@ -430,175 +308,133 @@ except Exception as e:
     print(f"Error iniciando sistema: {e}")
     sistema = None
 
-# --- RUTAS ---
+# --- RUTAS DE AUTENTICACIÓN ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        usuario = request.form.get('usuario')
+        password = request.form.get('password')
+        
+        if usuario in sistema.config['usuarios']:
+            user_config = sistema.config['usuarios'][usuario]
+            if user_config['password'] == password:
+                session['usuario'] = usuario
+                session['rol'] = user_config['rol']
+                session['terminal'] = user_config['terminal']
+                return redirect(url_for('index'))
+        
+        return render_template('login.html', error='Usuario o contraseña incorrectos')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+# --- RUTAS PROTEGIDAS ---
 
 def get_carrito():
-    if 'carrito' not in session:
-        session['carrito'] = []
-    return session['carrito']
+    usuario = session.get('usuario')
+    if f'carrito_{usuario}' not in session:
+        session[f'carrito_{usuario}'] = []
+    return session[f'carrito_{usuario}']
 
 @app.route('/')
+@login_required
 def index():
     if sistema is None:
         return render_template('error.html', 
                              mensaje="Sistema no disponible. Contacte al administrador.")
+    
+    usuario = session.get('usuario')
+    rol = session.get('rol')
+    terminal = session.get('terminal')
         
     carrito_actual = get_carrito()
     totales = sistema.calcular_totales(carrito_actual)
+    
+    # Obtener contador específico del terminal
+    contador_actual = sistema.contadores[terminal]["ultimo_cliente"] + 1 if terminal in sistema.contadores else 1
     
     return render_template('pos.html', 
                            sistema=sistema,
                            carrito=carrito_actual, 
                            totales=totales,
-                           id_cliente_actual=f"CLIENTE-{sistema.contador_clientes:04d}")
+                           usuario_actual=usuario,
+                           rol_actual=rol,
+                           terminal_actual=terminal,
+                           id_cliente_actual=f"CLIENTE-{terminal}-{contador_actual:04d}")
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
     if sistema is None:
         return redirect(url_for('index'))
-        
-    stats = sistema.obtener_estadisticas_dashboard(terminal_id=None)
+    
+    rol = session.get('rol')
+    terminal = session.get('terminal')
+    
+    if rol == 'admin':
+        stats = sistema.obtener_estadisticas_dashboard("TODAS")
+        stats_por_terminal = sistema.obtener_estadisticas_por_terminal()
+    else:
+        stats = sistema.obtener_estadisticas_dashboard(terminal)
+        stats_por_terminal = {}
     
     return render_template('dashboard.html', 
                            stats=stats,
+                           stats_por_terminal=stats_por_terminal,
                            empresa=sistema.config['empresa'],
-                           sistema=sistema)
+                           sistema=sistema,
+                           rol_actual=rol,
+                           terminal_actual=terminal)
 
-@app.route('/diagnostico')
-def diagnostico():
+@app.route('/dashboard/<terminal_id>')
+@admin_required
+def dashboard_terminal(terminal_id):
     if sistema is None:
-        return jsonify({
-            'status': 'ERROR',
-            'mensaje': 'Sistema POCOPAN no pudo inicializarse'
-        }), 500
+        return redirect(url_for('index'))
         
-    return jsonify({
-        'status': 'OK',
-        'mensaje': 'Sistema POCOPAN operativo',
-        'terminal': app.config['ID_TERMINAL_ACTUAL'],
-        'catalogo_cargado': sistema.catalogo_cargado,
-        'productos_en_catalogo': len(sistema.productos_disponibles),
-        'ventas_registradas': len(sistema.df_ventas) if hasattr(sistema, 'df_ventas') else 0
-    })
-
-@app.route('/buscar-productos')
-def buscar_productos_route():
-    if sistema is None:
-        return jsonify([])
+    if terminal_id not in ['POS1', 'POS2', 'POS3', 'TODAS']:
+        return redirect(url_for('dashboard'))
     
-    query = request.args.get('q', '').strip()
-    if len(query) < 2:
-        return jsonify([])
-        
-    productos = sistema.buscar_productos(query)
-    return jsonify(productos)
-
-@app.route('/detalles-producto/<path:producto_nombre>')
-def detalles_producto(producto_nombre):
-    if sistema is None:
-        return jsonify({'error': 'Sistema no disponible'}), 500
-        
-    try:
-        producto_decodificado = unquote(producto_nombre)
-        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
-        
-        detalles = sistema.obtener_detalles_producto(producto_limpio)
-        if detalles:
-            return jsonify(detalles)
-        else:
-            return jsonify({'error': f'Producto no encontrado: {producto_limpio}'}), 404
-            
-    except Exception as e:
-        print(f"Error en detalles-producto: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
-
-@app.route('/agregar-carrito', methods=['POST'])
-def agregar_carrito():
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        data = request.get_json()
-        producto = data.get('producto', '').strip()
-        cantidad = data.get('cantidad', 1)
-        
-        if not producto:
-            return jsonify({'success': False, 'message': 'Producto requerido'}), 400
-            
-        carrito_actual = get_carrito()
-        success, message, carrito_actual = sistema.agregar_al_carrito(carrito_actual, producto, cantidad)
-        session['carrito'] = carrito_actual
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': message,
-                'carrito': carrito_actual,
-                'totales': sistema.calcular_totales(carrito_actual)
-            })
-        else:
-            return jsonify({'success': False, 'message': message}), 400
-            
-    except Exception as e:
-        print(f"Error en agregar-carrito: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-@app.route('/eliminar-carrito/<int:index>', methods=['DELETE'])
-def eliminar_carrito(index):
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    carrito_actual = get_carrito()
-    success, message, carrito_actual = sistema.eliminar_del_carrito(carrito_actual, index)
-    session['carrito'] = carrito_actual
+    stats = sistema.obtener_estadisticas_dashboard(terminal_id)
     
-    if success:
-        return jsonify({
-            'success': True,
-            'message': message,
-            'carrito': carrito_actual,
-            'totales': sistema.calcular_totales(carrito_actual)
-        })
-    else:
-        return jsonify({'success': False, 'message': message}), 400
+    return render_template('dashboard.html', 
+                           stats=stats,
+                           stats_por_terminal={},
+                           empresa=sistema.config['empresa'],
+                           sistema=sistema,
+                           rol_actual='admin',
+                           terminal_actual=terminal_id)
 
-@app.route('/limpiar-carrito', methods=['DELETE'])
-def limpiar_carrito():
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    carrito_actual = get_carrito()
-    success, message, carrito_actual = sistema.limpiar_carrito(carrito_actual)
-    session['carrito'] = carrito_actual
-    
-    if success:
-        return jsonify({
-            'success': True,
-            'message': message,
-            'carrito': carrito_actual,
-            'totales': sistema.calcular_totales(carrito_actual)
-        })
-    else:
-        return jsonify({'success': False, 'message': message}), 400
+# ... (mantener todas las otras rutas existentes, pero actualizar get_carrito() y finalizar_venta())
 
 @app.route('/finalizar-venta', methods=['POST'])
+@login_required
 def finalizar_venta():
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
     carrito_actual = get_carrito()
-    success, result = sistema.finalizar_venta(carrito_actual)
+    terminal_id = session.get('terminal')
+    success, result = sistema.finalizar_venta(carrito_actual, terminal_id)
     
     if success:
-        session['carrito'] = []
+        usuario = session.get('usuario')
+        session[f'carrito_{usuario}'] = []
         return jsonify({
             'success': True,
             'message': 'Venta finalizada exitosamente',
             'resumen': result,
-            'id_cliente_actual': f"CLIENTE-{sistema.contador_clientes:04d}"
+            'id_cliente_actual': f"CLIENTE-{terminal_id}-{sistema.contadores[terminal_id]['ultimo_cliente'] + 1:04d}"
         })
     else:
         return jsonify({'success': False, 'message': result}), 400
+
+# ... (mantener el resto de rutas igual pero con @login_required)
 
 @app.errorhandler(404)
 def not_found(error):
@@ -610,4 +446,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
-    
+# [file content end]
