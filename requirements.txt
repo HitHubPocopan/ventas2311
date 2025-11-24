@@ -3,3 +3,4 @@ numpy
 openpyxl
 Werkzeug
 gunicorn
+pandas
