@@ -14,82 +14,94 @@
             <div class="user-badge">
                 <strong>Cliente Actual:</strong> {{ id_cliente_actual }}
             </div>
-            <button onclick="limpiarCarrito()" class="btn btn-danger">Limpiar Carrito</button>
+            <button onclick="limpiarCarrito()" class="btn btn-danger" {% if not carrito %}disabled{% endif %}>Limpiar Carrito</button>
         </div>
     </div>
 
-    <div class="grid grid-2" style="gap: 2rem;">
-        <!-- Sección de Productos -->
+    <div style="display: grid; grid-template-columns: 1fr 350px; gap: 2rem;">
+        <!-- Sección de Productos (80% del ancho) -->
         <div class="card">
             <div class="card-header">
-                <div style="display: flex; justify-content: between; align-items: center;">
-                    <span>Lista de Productos</span>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Catálogo de Productos</span>
                     <span class="user-terminal">{{ sistema.productos_disponibles|length }} productos</span>
                 </div>
             </div>
             <div class="card-body">
-                <!-- Búsqueda -->
-                <div class="form-group">
+                <!-- Búsqueda y Filtros -->
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; margin-bottom: 1.5rem;">
                     <div style="position: relative;">
-                        <input type="text" id="buscarProducto" class="form-control" placeholder="Buscar producto por nombre...">
+                        <input type="text" id="buscarProducto" class="form-control" placeholder="Buscar producto por nombre..." 
+                               onkeyup="filtrarProductos()">
                         <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--naranja-primario);">🔍</span>
                     </div>
-                </div>
-
-                <!-- Filtros por Categoría -->
-                <div style="margin-bottom: 1.5rem;">
-                    <label class="form-label">Filtrar por categoría:</label>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button class="btn btn-outline active" data-categoria="all" style="padding: 8px 16px; font-size: 0.9rem;">
-                            Todos
-                        </button>
+                    
+                    <select id="filtroCategoria" class="form-control" onchange="filtrarProductos()" style="min-width: 150px;">
+                        <option value="all">Todas las categorías</option>
                         {% if sistema.catalogo_cargado %}
                             {% set categorias_unicas = [] %}
                             {% for producto in sistema.catalogo %}
                                 {% if producto.Categoría and producto.Categoría not in categorias_unicas %}
                                     {% set _ = categorias_unicas.append(producto.Categoría) %}
-                                    <button class="btn btn-outline" data-categoria="{{ producto.Categoría }}" style="padding: 8px 16px; font-size: 0.9rem;">
-                                        {{ producto.Categoría }}
-                                    </button>
+                                    <option value="{{ producto.Categoría }}">{{ producto.Categoría }}</option>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}
-                    </div>
+                    </select>
                 </div>
 
-                <!-- Lista de Productos -->
-                <div style="max-height: 600px; overflow-y: auto; padding-right: 10px;">
-                    <div class="grid grid-2" id="lista-productos">
-                        {% for producto in sistema.catalogo %}
-                        <div class="producto-item card" style="padding: 1rem; cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent;" 
-                             data-categoria="{{ producto.Categoría }}"
-                             onclick="seleccionarProducto('{{ producto.Nombre }}')">
-                            <h3 style="color: var(--naranja-primario); margin-bottom: 0.5rem; font-size: 1rem; line-height: 1.3;">{{ producto.Nombre }}</h3>
-                            <p style="color: var(--texto-gris); margin-bottom: 0.5rem; font-size: 0.85rem;">
-                                {{ producto.Categoría }}
-                                {% if producto.Subcategoría %}
-                                · {{ producto.Subcategoría }}
-                                {% endif %}
-                            </p>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: bold; color: var(--texto-oscuro); font-size: 1.1rem;">
+                <!-- Lista de Productos - Diseño Vertical -->
+                <div id="lista-productos" style="max-height: 600px; overflow-y: auto; padding-right: 10px;">
+                    {% for producto in sistema.catalogo %}
+                    <div class="producto-item" 
+                         data-categoria="{{ producto.Categoría }}"
+                         data-nombre="{{ producto.Nombre|lower }}"
+                         style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s ease; background: white;"
+                         onmouseover="this.style.borderColor='var(--naranja-primario)'; this.style.backgroundColor='var(--naranja-fondo)';"
+                         onmouseout="this.style.borderColor='var(--naranja-borde)'; this.style.backgroundColor='white';"
+                         onclick="seleccionarProducto('{{ producto.Nombre }}')">
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <h3 style="color: var(--naranja-primario); margin: 0 0 0.5rem 0; font-size: 1rem; line-height: 1.3;">
+                                    {{ producto.Nombre }}
+                                </h3>
+                                <div style="display: flex; gap: 1rem; font-size: 0.85rem; color: var(--texto-gris); margin-bottom: 0.5rem;">
+                                    <span><strong>Categoría:</strong> {{ producto.Categoría }}</span>
+                                    {% if producto.Subcategoría and producto.Subcategoría != '' %}
+                                    <span><strong>Subcategoría:</strong> {{ producto.Subcategoría }}</span>
+                                    {% endif %}
+                                </div>
+                                <div style="font-size: 0.9rem; color: var(--texto-gris);">
+                                    <strong>Proveedor:</strong> {{ producto.Proveedor }}
+                                </div>
+                            </div>
+                            <div style="text-align: right; min-width: 120px;">
+                                <div style="font-size: 1.2rem; font-weight: bold; color: var(--naranja-primario); margin-bottom: 0.5rem;">
                                     ${{ "%.2f"|format(producto['Precio Venta']) }}
-                                </span>
-                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
-                                    Agregar
+                                </div>
+                                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; width: 100%;">
+                                    Agregar al Carrito
                                 </button>
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Contador de productos visibles -->
+                <div style="text-align: center; margin-top: 1rem; padding: 0.5rem; background: var(--naranja-fondo); border-radius: 6px;">
+                    <small style="color: var(--naranja-primario);">
+                        Mostrando <span id="contador-productos">{{ sistema.catalogo|length }}</span> de {{ sistema.catalogo|length }} productos
+                    </small>
                 </div>
             </div>
         </div>
 
-        <!-- Sección del Carrito -->
+        <!-- Sección del Carrito (20% del ancho) -->
         <div class="card">
             <div class="card-header">
-                <div style="display: flex; justify-content: between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Carrito de Compra</span>
                     <span class="user-terminal" id="contador-carrito">{{ carrito|length }} items</span>
                 </div>
@@ -98,47 +110,53 @@
                 <div id="carrito-contenido" style="max-height: 400px; overflow-y: auto; margin-bottom: 1.5rem;">
                     {% if carrito %}
                         {% for item in carrito %}
-                        <div class="carrito-item" style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: var(--naranja-fondo);">
+                        <div class="carrito-item" style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; background: var(--naranja-fondo);">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                                <h4 style="color: var(--texto-oscuro); margin: 0; flex: 1; font-size: 0.95rem;">{{ item.producto }}</h4>
-                                <button onclick="eliminarDelCarrito({{ loop.index0 }})" class="btn btn-danger" style="padding: 4px 8px; margin-left: 10px; font-size: 0.8rem;">×</button>
+                                <div style="flex: 1;">
+                                    <h4 style="color: var(--texto-oscuro); margin: 0 0 0.25rem 0; font-size: 0.9rem; line-height: 1.2;">{{ item.producto }}</h4>
+                                    <div style="font-size: 0.75rem; color: var(--texto-gris);">
+                                        <strong>Categoría:</strong> {{ item.categoria }}
+                                    </div>
+                                </div>
+                                <button onclick="eliminarDelCarrito({{ loop.index0 }})" class="btn btn-danger" style="padding: 2px 6px; margin-left: 8px; font-size: 0.7rem; min-width: 20px;">×</button>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
                                 <div>
-                                    <strong>Precio:</strong> ${{ "%.2f"|format(item.precio) }}
+                                    <strong>Precio:</strong><br>
+                                    ${{ "%.2f"|format(item.precio) }}
                                 </div>
                                 <div>
-                                    <strong>Cantidad:</strong> 
+                                    <strong>Cantidad:</strong><br>
                                     <input type="number" value="{{ item.cantidad }}" min="1" max="100" 
                                            onchange="actualizarCantidad({{ loop.index0 }}, this.value)"
-                                           style="width: 60px; padding: 4px; border: 1px solid var(--naranja-borde); border-radius: 4px; font-size: 0.8rem;">
+                                           style="width: 60px; padding: 2px 4px; border: 1px solid var(--naranja-borde); border-radius: 4px; font-size: 0.8rem;">
                                 </div>
                             </div>
-                            <div style="text-align: right; margin-top: 0.5rem;">
+                            <div style="text-align: right; margin-top: 0.5rem; font-size: 0.85rem;">
                                 <strong style="color: var(--naranja-primario);">Subtotal: ${{ "%.2f"|format(item.subtotal) }}</strong>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div style="text-align: center; padding: 3rem; color: var(--texto-gris);">
-                            <div style="font-size: 3rem; margin-bottom: 1rem;">🛒</div>
-                            <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">El carrito está vacío</p>
-                            <p style="font-size: 0.9rem;">Agrega productos desde la lista</p>
+                        <div style="text-align: center; padding: 2rem; color: var(--texto-gris);">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛒</div>
+                            <p style="font-size: 0.9rem; margin-bottom: 0.25rem;">El carrito está vacío</p>
+                            <p style="font-size: 0.8rem;">Agrega productos desde la lista</p>
                         </div>
                     {% endif %}
                 </div>
 
                 <!-- Totales -->
                 <div style="border-top: 2px solid var(--naranja-borde); padding-top: 1rem; margin-top: 1rem;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
                         <span>Subtotal:</span>
                         <strong id="subtotal-display">${{ "%.2f"|format(totales.subtotal) }}</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
                         <span>IVA ({{ totales.porcentaje_iva }}%):</span>
                         <strong id="iva-display">${{ "%.2f"|format(totales.iva) }}</strong>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold; border-top: 1px solid var(--naranja-borde); padding-top: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold; border-top: 1px solid var(--naranja-borde); padding-top: 0.5rem;">
                         <span>Total:</span>
                         <strong id="total-display" style="color: var(--naranja-primario);">${{ "%.2f"|format(totales.total) }}</strong>
                     </div>
@@ -148,7 +166,7 @@
                 <button id="btn-finalizar-venta" 
                         onclick="finalizarVenta()" 
                         class="btn btn-primary" 
-                        style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 1.5rem; font-weight: 600;"
+                        style="width: 100%; padding: 12px; font-size: 1rem; margin-top: 1rem; font-weight: 600;"
                         {% if not carrito %}disabled{% endif %}>
                     🎯 Finalizar Venta
                 </button>
@@ -158,8 +176,8 @@
 </div>
 
 <!-- Modal para agregar producto -->
-<div id="modal-producto" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
-    <div class="card" style="width: 90%; max-width: 500px;">
+<div id="modal-producto" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="card" style="width: 90%; max-width: 500px; margin: 2rem;">
         <div class="card-header">
             Agregar Producto al Carrito
         </div>
@@ -171,7 +189,7 @@
             </div>
             <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                 <button onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
-                <button onclick="agregarAlCarrito()" class="btn btn-primary">Agregar al Carrito</button>
+                <button onclick="confirmarAgregarAlCarrito()" class="btn btn-primary">Agregar al Carrito</button>
             </div>
         </div>
     </div>
@@ -183,59 +201,40 @@
     let productoSeleccionado = null;
 
     // Filtrado de productos
-    document.addEventListener('DOMContentLoaded', function() {
-        // Búsqueda en tiempo real
-        document.getElementById('buscarProducto').addEventListener('input', function(e) {
-            const query = e.target.value.toLowerCase();
-            const productos = document.querySelectorAll('.producto-item');
-            let visibleCount = 0;
+    function filtrarProductos() {
+        const query = document.getElementById('buscarProducto').value.toLowerCase();
+        const categoria = document.getElementById('filtroCategoria').value;
+        const productos = document.querySelectorAll('.producto-item');
+        let visibleCount = 0;
+        
+        productos.forEach(producto => {
+            const nombre = producto.getAttribute('data-nombre');
+            const catProducto = producto.getAttribute('data-categoria');
+            const coincideNombre = nombre.includes(query);
+            const coincideCategoria = categoria === 'all' || catProducto === categoria;
             
-            productos.forEach(producto => {
-                const nombre = producto.querySelector('h3').textContent.toLowerCase();
-                if (nombre.includes(query)) {
-                    producto.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    producto.style.display = 'none';
-                }
-            });
+            if (coincideNombre && coincideCategoria) {
+                producto.style.display = 'block';
+                visibleCount++;
+            } else {
+                producto.style.display = 'none';
+            }
         });
+        
+        document.getElementById('contador-productos').textContent = visibleCount;
+    }
 
-        // Filtrado por categoría
-        document.querySelectorAll('[data-categoria]').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const categoria = this.getAttribute('data-categoria');
-                
-                // Actualizar botones activos
-                document.querySelectorAll('[data-categoria]').forEach(b => {
-                    b.classList.remove('active');
-                    b.classList.add('btn-outline');
-                });
-                this.classList.add('active');
-                this.classList.remove('btn-outline');
-
-                // Filtrar productos
-                const productos = document.querySelectorAll('.producto-item');
-                let visibleCount = 0;
-                
-                productos.forEach(producto => {
-                    const catProducto = producto.getAttribute('data-categoria');
-                    if (categoria === 'all' || catProducto === categoria) {
-                        producto.style.display = 'block';
-                        visibleCount++;
-                    } else {
-                        producto.style.display = 'none';
-                    }
-                });
-            });
-        });
-    });
-
+    // Modal functions
     function seleccionarProducto(nombreProducto) {
         productoSeleccionado = nombreProducto;
         
         fetch('/detalles-producto/' + encodeURIComponent(nombreProducto))
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(detalles => {
                 if (detalles.error) {
                     showNotification(detalles.error, 'error');
@@ -255,25 +254,43 @@
         
         contenido.innerHTML = `
             <h3 style="color: var(--naranja-primario); margin-bottom: 1rem;">${detalles.nombre}</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; background: var(--naranja-fondo); padding: 1rem; border-radius: 8px;">
-                <div><strong>Precio:</strong> $${detalles.precio.toFixed(2)}</div>
-                <div><strong>Categoría:</strong> ${detalles.categoria || 'N/A'}</div>
-                <div><strong>Proveedor:</strong> ${detalles.proveedor || 'N/A'}</div>
-                <div><strong>Estado:</strong> ${detalles.estado || 'Disponible'}</div>
+            <div style="background: var(--naranja-fondo); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem;">
+                    <div><strong>Precio:</strong> $${detalles.precio.toFixed(2)}</div>
+                    <div><strong>Categoría:</strong> ${detalles.categoria || 'N/A'}</div>
+                    <div><strong>Subcategoría:</strong> ${detalles.subcategoria || 'N/A'}</div>
+                    <div><strong>Proveedor:</strong> ${detalles.proveedor || 'N/A'}</div>
+                    <div><strong>Estado:</strong> ${detalles.estado || 'Disponible'}</div>
+                </div>
             </div>
         `;
         
-        modal.classList.remove('hidden');
+        // Reset cantidad
+        document.getElementById('cantidad-producto').value = 1;
+        modal.style.display = 'flex';
     }
 
     function cerrarModal() {
-        document.getElementById('modal-producto').classList.add('hidden');
+        document.getElementById('modal-producto').style.display = 'none';
+        productoSeleccionado = null;
     }
 
-    function agregarAlCarrito() {
-        const cantidad = document.getElementById('cantidad-producto').value;
-        if (!cantidad || cantidad < 1) {
-            showNotification('La cantidad debe ser mayor a 0', 'error');
+    function confirmarAgregarAlCarrito() {
+        const cantidadInput = document.getElementById('cantidad-producto');
+        const cantidad = parseInt(cantidadInput.value);
+        
+        if (!cantidad || cantidad < 1 || cantidad > 100) {
+            showNotification('La cantidad debe ser un número entre 1 y 100', 'error');
+            cantidadInput.focus();
+            return;
+        }
+
+        agregarAlCarrito(cantidad);
+    }
+
+    function agregarAlCarrito(cantidad) {
+        if (!productoSeleccionado) {
+            showNotification('No hay producto seleccionado', 'error');
             return;
         }
 
@@ -287,7 +304,12 @@
                 cantidad: cantidad
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 actualizarInterfazCarrito(data);
@@ -299,7 +321,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('Error de conexión', 'error');
+            showNotification('Error de conexión al agregar producto', 'error');
         });
     }
 
@@ -311,7 +333,12 @@
         fetch('/eliminar-carrito/' + index, {
             method: 'DELETE'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 actualizarInterfazCarrito(data);
@@ -327,6 +354,13 @@
     }
 
     function actualizarCantidad(index, nuevaCantidad) {
+        const cantidad = parseInt(nuevaCantidad);
+        if (isNaN(cantidad) || cantidad < 1 || cantidad > 100) {
+            showNotification('La cantidad debe estar entre 1 y 100', 'error');
+            window.location.reload(); // Recargar para restaurar valor original
+            return;
+        }
+
         // Recargar la página para actualizar (solución simple)
         window.location.reload();
     }
@@ -339,7 +373,12 @@
         fetch('/limpiar-carrito', {
             method: 'DELETE'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 actualizarInterfazCarrito(data);
@@ -362,7 +401,12 @@
         fetch('/finalizar-venta', {
             method: 'POST'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 actualizarInterfazCarrito(data);
@@ -383,52 +427,73 @@
 
     function actualizarInterfazCarrito(data) {
         // Actualizar contador de carrito
-        document.getElementById('contador-carrito').textContent = data.carrito ? data.carrito.length + ' items' : '0 items';
+        const contadorCarrito = document.getElementById('contador-carrito');
+        if (contadorCarrito) {
+            contadorCarrito.textContent = data.carrito ? data.carrito.length + ' items' : '0 items';
+        }
 
         // Actualizar contenido del carrito
         const carritoContenido = document.getElementById('carrito-contenido');
-        if (data.carrito && data.carrito.length > 0) {
-            let html = '';
-            data.carrito.forEach((item, index) => {
-                html += `
-                    <div class="carrito-item" style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: var(--naranja-fondo);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                            <h4 style="color: var(--texto-oscuro); margin: 0; flex: 1; font-size: 0.95rem;">${item.producto}</h4>
-                            <button onclick="eliminarDelCarrito(${index})" class="btn btn-danger" style="padding: 4px 8px; margin-left: 10px; font-size: 0.8rem;">×</button>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem;">
-                            <div>
-                                <strong>Precio:</strong> $${item.precio.toFixed(2)}
+        if (carritoContenido) {
+            if (data.carrito && data.carrito.length > 0) {
+                let html = '';
+                data.carrito.forEach((item, index) => {
+                    html += `
+                        <div class="carrito-item" style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; background: var(--naranja-fondo);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                <div style="flex: 1;">
+                                    <h4 style="color: var(--texto-oscuro); margin: 0 0 0.25rem 0; font-size: 0.9rem; line-height: 1.2;">${item.producto}</h4>
+                                    <div style="font-size: 0.75rem; color: var(--texto-gris);">
+                                        <strong>Categoría:</strong> ${item.categoria}
+                                    </div>
+                                </div>
+                                <button onclick="eliminarDelCarrito(${index})" class="btn btn-danger" style="padding: 2px 6px; margin-left: 8px; font-size: 0.7rem; min-width: 20px;">×</button>
                             </div>
-                            <div>
-                                <strong>Cantidad:</strong> 
-                                <input type="number" value="${item.cantidad}" min="1" max="100" 
-                                       onchange="actualizarCantidad(${index}, this.value)"
-                                       style="width: 60px; padding: 4px; border: 1px solid var(--naranja-borde); border-radius: 4px; font-size: 0.8rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+                                <div>
+                                    <strong>Precio:</strong><br>
+                                    $${item.precio.toFixed(2)}
+                                </div>
+                                <div>
+                                    <strong>Cantidad:</strong><br>
+                                    <input type="number" value="${item.cantidad}" min="1" max="100" 
+                                           onchange="actualizarCantidad(${index}, this.value)"
+                                           style="width: 60px; padding: 2px 4px; border: 1px solid var(--naranja-borde); border-radius: 4px; font-size: 0.8rem;">
+                                </div>
+                            </div>
+                            <div style="text-align: right; margin-top: 0.5rem; font-size: 0.85rem;">
+                                <strong style="color: var(--naranja-primario);">Subtotal: $${item.subtotal.toFixed(2)}</strong>
                             </div>
                         </div>
-                        <div style="text-align: right; margin-top: 0.5rem;">
-                            <strong style="color: var(--naranja-primario);">Subtotal: $${item.subtotal.toFixed(2)}</strong>
-                        </div>
+                    `;
+                });
+                carritoContenido.innerHTML = html;
+            } else {
+                carritoContenido.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: var(--texto-gris);">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛒</div>
+                        <p style="font-size: 0.9rem; margin-bottom: 0.25rem;">El carrito está vacío</p>
+                        <p style="font-size: 0.8rem;">Agrega productos desde la lista</p>
                     </div>
                 `;
-            });
-            carritoContenido.innerHTML = html;
-        } else {
-            carritoContenido.innerHTML = `
-                <div style="text-align: center; padding: 3rem; color: var(--texto-gris);">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🛒</div>
-                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">El carrito está vacío</p>
-                    <p style="font-size: 0.9rem;">Agrega productos desde la lista</p>
-                </div>
-            `;
+            }
         }
 
         // Actualizar totales
         if (data.totales) {
-            document.getElementById('subtotal-display').textContent = '$' + data.totales.subtotal.toFixed(2);
-            document.getElementById('iva-display').textContent = '$' + data.totales.iva.toFixed(2);
-            document.getElementById('total-display').textContent = '$' + data.totales.total.toFixed(2);
+            const subtotalDisplay = document.getElementById('subtotal-display');
+            const ivaDisplay = document.getElementById('iva-display');
+            const totalDisplay = document.getElementById('total-display');
+            
+            if (subtotalDisplay) subtotalDisplay.textContent = '$' + data.totales.subtotal.toFixed(2);
+            if (ivaDisplay) ivaDisplay.textContent = '$' + data.totales.iva.toFixed(2);
+            if (totalDisplay) totalDisplay.textContent = '$' + data.totales.total.toFixed(2);
+        }
+
+        // Actualizar botón de limpiar carrito
+        const btnLimpiar = document.querySelector('button[onclick="limpiarCarrito()"]');
+        if (btnLimpiar) {
+            btnLimpiar.disabled = !data.carrito || data.carrito.length === 0;
         }
 
         // Actualizar botón de finalizar venta
@@ -437,5 +502,23 @@
             btnFinalizar.disabled = !data.carrito || data.carrito.length === 0;
         }
     }
+
+    // Cerrar modal al hacer clic fuera
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('modal-producto');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    cerrarModal();
+                }
+            });
+        }
+
+        // Prevenir cualquier evento automático no deseado
+        document.addEventListener('click', function(e) {
+            // Solo permitir eventos de clic intencionales
+            console.log('Click en:', e.target);
+        }, true);
+    });
 </script>
 {% endblock %}
