@@ -1,146 +1,205 @@
+<!-- [file name]: base.html -->
+<!-- [file content begin] -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POCOPAN - {% block title %}{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Flowbite CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-<body>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <!-- Sidebar Navigation -->
+    <button data-drawer-target="default-sidebar" data-drawer-toggle="default-sidebar" aria-controls="default-sidebar" type="button" class="inline-flex items-center p-2 mt-2 ms-3 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600">
+        <span class="sr-only">Abrir sidebar</span>
+        <svg class="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
+        </svg>
+    </button>
 
-<div class="d-flex" id="wrapper">
-    <div class="bg-light border-end" id="sidebar-wrapper">
-        <div class="sidebar-heading p-3 text-white pocopan-bg-primary">POCOPAN - Administrador</div>
-        <div class="list-group list-group-flush">
-            <a class="list-group-item list-group-item-action p-3" href="{{ url_for('dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
-            <a class="list-group-item list-group-item-action p-3" href="#"><i class="bi bi-people me-2"></i>Usuarios</a>
-            <a class="list-group-item list-group-item-action p-3" href="#"><i class="bi bi-box-seam me-2"></i>Productos</a>
-            <a class="list-group-item list-group-item-action p-3" href="#"><i class="bi bi-receipt me-2"></i>Ventas</a>
-            <a class="list-group-item list-group-item-action p-3" href="{{ url_for('index') }}"><i class="bi bi-cart me-2"></i>Punto de Venta</a>
+    <aside id="default-sidebar" class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0" aria-label="Sidebar">
+        <div class="h-full px-3 py-4 overflow-y-auto bg-gray-800">
+            <!-- Logo -->
+            <div class="flex items-center ps-2.5 mb-5">
+                <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span class="self-center text-xl font-semibold whitespace-nowrap text-white ms-2">POCOPAN</span>
+            </div>
+
+            <!-- User Info -->
+            <div class="p-3 mb-4 bg-gray-700 rounded-lg">
+                <div class="text-center">
+                    <h6 class="text-sm font-medium text-white">{{ session.usuario }}</h6>
+                    <p class="text-xs text-gray-300 mt-1">Terminal: {{ session.terminal }}</p>
+                    {% if session.rol == 'admin' %}
+                    <span class="inline-block mt-1 px-2 py-1 text-xs font-semibold text-yellow-400 bg-yellow-900 rounded-full">
+                        Administrador
+                    </span>
+                    {% else %}
+                    <span class="inline-block mt-1 px-2 py-1 text-xs font-semibold text-green-400 bg-green-900 rounded-full">
+                        Punto de Venta
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <ul class="space-y-2 font-medium">
+                <li>
+                    <a href="{{ url_for('dashboard') }}" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-700 group">
+                        <svg class="w-5 h-5 text-gray-400 transition duration-75 group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 22 21">
+                            <path d="M16.975 11H10V4.025a1 1 0 0 0-1.066-.998 8.5 8.5 0 1 0 9.039 9.039.999.999 0 0 0-1-1.066h.002Z"/>
+                            <path d="M12.5 0c-.157 0-.311.01-.565.027A1 1 0 0 0 11 1.02V10h8.975a1 1 0 0 0 1-.935c.013-.188.028-.374.028-.565A8.51 8.51 0 0 0 12.5 0Z"/>
+                        </svg>
+                        <span class="ms-3">Dashboard</span>
+                    </a>
+                </li>
+                
+                {% if session.rol == 'admin' %}
+                <li>
+                    <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-700 group">
+                        <svg class="w-5 h-5 text-gray-400 transition duration-75 group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 18">
+                            <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z"/>
+                        </svg>
+                        <span class="flex-1 ms-3 whitespace-nowrap">Gestión de Usuarios</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li>
+                    <a href="{{ url_for('index') }}" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-700 group">
+                        <svg class="w-5 h-5 text-gray-400 transition duration-75 group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 20">
+                            <path d="M17 5.923A1 1 0 0 0 16 5h-3V4a4 4 0 1 0-8 0v1H2a1 1 0 0 0-1 .923L.086 17.846A2 2 0 0 0 2.08 20h13.84a2 2 0 0 0 1.994-2.153L17 5.923ZM7 9a1 1 0 0 1-2 0V7h2v2Zm0-5a2 2 0 1 1 4 0v1H7V4Zm6 5a1 1 0 1 1-2 0V7h2v2Z"/>
+                        </svg>
+                        <span class="flex-1 ms-3 whitespace-nowrap">Punto de Venta</span>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="{{ url_for('logout') }}" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-700 group">
+                        <svg class="w-5 h-5 text-gray-400 transition duration-75 group-hover:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 16">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 8h11m0 0L8 4m4 4-4 4m4-11h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-3"/>
+                        </svg>
+                        <span class="flex-1 ms-3 whitespace-nowrap">Cerrar Sesión</span>
+                    </a>
+                </li>
+            </ul>
         </div>
-    </div>
-    
-    <div id="page-content-wrapper">
-        <nav class="navbar navbar-expand-lg border-bottom pocopan-bg-primary text-white">
-            <div class="container-fluid">
-                <button class="btn btn-outline-light" id="sidebarToggle"><i class="bi bi-list"></i></button>
-                <div class="navbar-nav ms-auto">
-                    <span class="nav-item nav-link text-white">{{ sistema.config['empresa'] }} Multi-Terminal</span>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="p-4 sm:ml-64">
+        <!-- Header -->
+        <nav class="bg-white border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700 fixed left-0 right-0 top-0 z-50 sm:pl-64">
+            <div class="flex flex-wrap justify-between items-center">
+                <div class="flex justify-start items-center">
+                    <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        {{ sistema.config['empresa'] }} - {{ session.terminal }}
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ session.usuario }}
+                    </span>
                 </div>
             </div>
         </nav>
-        
-        <div class="container-fluid p-4">
+
+        <!-- Page Content -->
+        <div class="p-4 mt-14">
             {% block content %}{% endblock %}
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    // Script básico para colapsar/expandir el sidebar
-    document.getElementById("sidebarToggle").onclick = function() {
-        document.getElementById("wrapper").classList.toggle("toggled");
-    };
-</script>
-        <!-- BUSCA EL FINAL DEL ARCHIVO base.html -->
-<!-- ANTES del cierre </body> PEGA ESTO: -->
+    <!-- Notifications Container -->
+    <div class="notification-container" id="notificationContainer"></div>
 
-<div class="notification-container" id="notificationContainer"></div>
+    <!-- Flowbite JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js"></script>
+    
+    <script>
+        // Funciones de notificación (mantener las existentes)
+        function showSuccess(message, title = 'Éxito') {
+            showNotification(title, message, 'success');
+        }
 
-<script>
-// PEGA ESTE CÓDIGO JAVASCRIPT JUSTO DESPUÉS
+        function showError(message, title = 'Error') {
+            showNotification(title, message, 'error');
+        }
 
-// Función para mostrar notificación de éxito
-function showSuccess(message, title = 'Éxito') {
-    showNotification(title, message, 'success');
-}
+        function showWarning(message, title = 'Advertencia') {
+            showNotification(title, message, 'warning');
+        }
 
-// Función para mostrar notificación de error
-function showError(message, title = 'Error') {
-    showNotification(title, message, 'error');
-}
+        function showInfo(message, title = 'Información') {
+            showNotification(title, message, 'info');
+        }
 
-// Función para mostrar notificación de advertencia
-function showWarning(message, title = 'Advertencia') {
-    showNotification(title, message, 'warning');
-}
-
-// Función para mostrar notificación informativa
-function showInfo(message, title = 'Información') {
-    showNotification(title, message, 'info');
-}
-
-// Función principal para mostrar notificaciones
-function showNotification(title, message, type = 'info') {
-    const container = document.getElementById('notificationContainer');
-    
-    // Si no existe el contenedor, crearlo
-    if (!container) {
-        const newContainer = document.createElement('div');
-        newContainer.className = 'notification-container';
-        newContainer.id = 'notificationContainer';
-        document.body.appendChild(newContainer);
-    }
-    
-    const actualContainer = document.getElementById('notificationContainer');
-    
-    // Crear elemento de notificación
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    
-    // Icono según el tipo
-    let icon = '✓';
-    if (type === 'error') icon = '✕';
-    if (type === 'warning') icon = '⚠';
-    if (type === 'info') icon = 'ℹ';
-    
-    // Contenido de la notificación
-    notification.innerHTML = `
-        <div class="notification-icon">${icon}</div>
-        <div class="notification-content">
-            <div class="notification-title">${title}</div>
-            <div class="notification-message">${message}</div>
-            <div class="auto-close-bar">
-                <div class="auto-close-progress" style="background: ${getProgressColor(type)}"></div>
-            </div>
-        </div>
-    `;
-    
-    // Añadir al contenedor
-    actualContainer.appendChild(notification);
-    
-    // Mostrar con animación
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // Ocultar después de 2 segundos
-    setTimeout(() => {
-        notification.classList.remove('show');
-        notification.classList.add('hide');
-        
-        // Eliminar del DOM después de la animación
-        setTimeout(() => {
-            if (notification.parentNode) {
-                actualContainer.removeChild(notification);
+        function showNotification(title, message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            
+            if (!container) {
+                const newContainer = document.createElement('div');
+                newContainer.className = 'notification-container';
+                newContainer.id = 'notificationContainer';
+                document.body.appendChild(newContainer);
             }
-        }, 400);
-    }, 2000);
-}
+            
+            const actualContainer = document.getElementById('notificationContainer');
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            let icon = '✓';
+            if (type === 'error') icon = '✕';
+            if (type === 'warning') icon = '⚠';
+            if (type === 'info') icon = 'ℹ';
+            
+            notification.innerHTML = `
+                <div class="notification-icon">${icon}</div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                    <div class="auto-close-bar">
+                        <div class="auto-close-progress" style="background: ${getProgressColor(type)}"></div>
+                    </div>
+                </div>
+            `;
+            
+            actualContainer.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                notification.classList.add('hide');
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        actualContainer.removeChild(notification);
+                    }
+                }, 400);
+            }, 2000);
+        }
 
-// Obtener color para la barra de progreso según el tipo
-function getProgressColor(type) {
-    switch(type) {
-        case 'success': return '#A5D6A7';
-        case 'error': return '#EF9A9A';
-        case 'warning': return '#FFCC80';
-        case 'info': return '#90CAF9';
-        default: return '#FFFFFF';
-    }
-}
-</script>
+        function getProgressColor(type) {
+            switch(type) {
+                case 'success': return '#A5D6A7';
+                case 'error': return '#EF9A9A';
+                case 'warning': return '#FFCC80';
+                case 'info': return '#90CAF9';
+                default: return '#FFFFFF';
+            }
+        }
+    </script>
 </body>
 </html>
+<!-- [file content end] -->
+ 

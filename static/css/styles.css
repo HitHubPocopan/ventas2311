@@ -1,108 +1,6 @@
-/* Colores clave de la estética de PocoPan */
-:root {
-    --pocopan-red: #d9534f;
-    --pocopan-orange: #ff5733;
-    --pocopan-green: #5cb85c;
-    --pocopan-blue: #3498db;
-    --pocopan-dark: #2c3e50;
-}
-
-/* Fondo para el header y el encabezado del sidebar */
-.pocopan-bg-primary {
-    background-color: var(--pocopan-orange) !important;
-}
-
-/* Estilo para las tarjetas de Ventas */
-.pocopan-card-ventas {
-    border-left-color: var(--pocopan-red) !important;
-}
-
-/* Estilo para las tarjetas de Ingresos */
-.pocopan-card-ingresos {
-    border-left-color: var(--pocopan-green) !important;
-}
-
-/* Ajustes del sidebar para un mejor aspecto */
-#sidebar-wrapper {
-    min-height: 100vh;
-    margin-left: -15rem;
-    transition: margin .25s ease-out;
-}
-
-#sidebar-wrapper .list-group {
-    width: 15rem;
-}
-
-#page-content-wrapper {
-    min-width: 100vw;
-}
-
-#wrapper.toggled #sidebar-wrapper {
-    margin-left: 0;
-}
-
-/* Estilos adicionales para el POS */
-.carrito-item {
-    transition: all 0.3s ease;
-    border-left: 4px solid var(--pocopan-blue);
-}
-
-.carrito-item:hover {
-    border-left-color: var(--pocopan-green);
-    transform: translateX(5px);
-}
-
-.producto-item {
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.producto-item:hover {
-    background-color: #f8f9fa;
-    transform: translateY(-2px);
-}
-
-.search-highlight {
-    background-color: #fff3cd;
-    font-weight: bold;
-    padding: 0.1rem 0.2rem;
-    border-radius: 0.2rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    #sidebar-wrapper {
-        margin-left: 0;
-    }
-    
-    #wrapper.toggled #sidebar-wrapper {
-        margin-left: -15rem;
-    }
-}
-
-/* Animaciones */
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Mejoras visuales */
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
-}
-
-.card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-/* PEGA ESTO AL FINAL DE TU ARCHIVO styles.css */
-
-/* ========== NOTIFICACIONES ========== */
+/* [file name]: static/css/styles.css */
+/* [file content begin] */
+/* Estilos para notificaciones */
 .notification-container {
     position: fixed;
     top: 20px;
@@ -196,3 +94,37 @@
     from { transform: scaleX(1); }
     to { transform: scaleX(0); }
 }
+
+/* Estilos adicionales para POS */
+.producto-lista-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.producto-lista-item:hover {
+    background-color: #f8fafc;
+    transform: translateY(-1px);
+}
+
+.carrito-item {
+    border-left: 4px solid #3b82f6;
+}
+
+.categoria-btn.active {
+    background-color: #3b82f6 !important;
+    color: white !important;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .notification-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .notification {
+        max-width: none;
+    }
+}
+/* [file content end] */
