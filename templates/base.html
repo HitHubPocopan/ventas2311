@@ -42,6 +42,9 @@
                 {% if session.rol == 'admin' %}
                 <a href="{{ url_for('dashboard_terminal', terminal_id='TODAS') }}" class="btn btn-outline">Todas las Terminales</a>
                 {% endif %}
+                {% if session.rol == 'admin' %}
+                <a href="{{ url_for('editor_catalogo') }}" class="btn btn-outline">Editor de Catálogo</a>
+                {% endif %}
             </div>
         </div>
     </nav>
