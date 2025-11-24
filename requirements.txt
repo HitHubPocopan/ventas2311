@@ -1,5 +1,4 @@
-Flask
-pandas
+Flask==2.3.3
 numpy
 openpyxl
 Werkzeug
