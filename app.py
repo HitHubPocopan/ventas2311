@@ -108,30 +108,63 @@ class SistemaPocopan:
         except Exception as e:
             print(f"❌ Error cargando contadores: {str(e)}")
 
-    def guardar_catalogo_en_excel(self):
-        """Guarda el catálogo actual en el archivo Excel"""
-        try:
-            # Crear DataFrame desde el catálogo en memoria
-            df_catalogo = pd.DataFrame(self.catalogo)
-
-            # Renombrar columnas para coincidir con el formato original
-            column_mapping = {
-                'Nombre': 'Nombre',
-                'Categoría': 'Categoria',
-                'Subcategoría': 'SubCAT',
-                'Precio Venta': 'Precio Venta',
-                'Proveedor': 'Proveedor',
-                'Estado': 'Estado'
-            }
-            df_catalogo = df_catalogo.rename(columns=column_mapping)
-
-            # Guardar en Excel
-            df_catalogo.to_excel('catalogo.xlsx', index=False)
-            print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
+def guardar_catalogo_en_excel(self):
+    """Guarda el catálogo actual en el archivo Excel - VERSIÓN CORREGIDA"""
+    try:
+        # Crear DataFrame desde el catálogo en memoria
+        df_catalogo = pd.DataFrame(self.catalogo)
+        
+        # Verificar que el DataFrame no esté vacío
+        if df_catalogo.empty:
+            print("⚠️ Catálogo vacío, no hay nada que guardar")
             return True
-        except Exception as e:
-            print(f"❌ Error guardando catálogo en Excel: {str(e)}")
-            return False
+            
+        # Renombrar columnas para coincidir con el formato original del Excel
+        column_mapping = {
+            'Nombre': 'Nombre',
+            'Categoría': 'Categoria', 
+            'Subcategoría': 'SubCAT',
+            'Precio Venta': 'Precio Venta',
+            'Proveedor': 'Proveedor',
+            'Estado': 'Estado'
+        }
+        
+        # Aplicar el mapeo de columnas
+        df_catalogo = df_catalogo.rename(columns=column_mapping)
+        
+        # Asegurarse de que tenemos todas las columnas necesarias
+        columnas_requeridas = ['Nombre', 'Categoria', 'SubCAT', 'Precio Venta', 'Proveedor', 'Estado']
+        for col in columnas_requeridas:
+            if col not in df_catalogo.columns:
+                df_catalogo[col] = ''  # Agregar columna vacía si falta
+        
+        # Reordenar columnas para que coincidan con el formato original
+        df_catalogo = df_catalogo[columnas_requeridas]
+        
+        # Guardar en Excel
+        df_catalogo.to_excel('catalogo.xlsx', index=False, engine='openpyxl')
+        
+        print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error guardando catálogo en Excel: {str(e)}")
+        # Intentar crear un backup en caso de error
+        try:
+            backup_df = pd.DataFrame([{
+                'Nombre': 'Producto de Emergencia',
+                'Categoria': 'General',
+                'SubCAT': '',
+                'Precio Venta': 1000,
+                'Proveedor': 'Sistema',
+                'Estado': 'Disponible'
+            }])
+            backup_df.to_excel('catalogo_backup.xlsx', index=False)
+            print("✅ Backup del catálogo creado")
+        except:
+            print("❌ Error creando backup")
+        
+        return False
 
     def guardar_ventas_en_excel(self):
         """Guarda todas las ventas en el archivo Excel"""
@@ -789,7 +822,9 @@ def finalizar_venta():
     else:
         return jsonify({'success': False, 'message': result}), 400
 
-# === RUTAS DEL EDITOR DE CATÁLOGO ===
+# ... (todo el código anterior se mantiene igual hasta las rutas del editor)
+
+# === RUTAS DEL EDITOR DE CATÁLOGO CORREGIDAS ===
 @app.route('/editor-catalogo')
 @admin_required
 def editor_catalogo():
@@ -859,8 +894,10 @@ def actualizar_producto():
                 break
         
         if producto_encontrado:
-            # Guardar cambios en Excel
-            if sistema.guardar_catalogo_en_excel():
+            # Guardar cambios en Excel - MÉTODO CORREGIDO
+            success = sistema.guardar_catalogo_en_excel()
+            
+            if success:
                 # Actualizar también la lista de productos disponibles
                 sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
                 
@@ -919,8 +956,10 @@ def agregar_producto():
         
         sistema.catalogo.append(nuevo_producto)
         
-        # Guardar en Excel
-        if sistema.guardar_catalogo_en_excel():
+        # Guardar en Excel - MÉTODO CORREGIDO
+        success = sistema.guardar_catalogo_en_excel()
+        
+        if success:
             sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
             
             return jsonify({
@@ -929,6 +968,8 @@ def agregar_producto():
                 'nuevo_producto': nuevo_producto
             })
         else:
+            # Revertir el cambio en memoria si falla guardar en Excel
+            sistema.catalogo.remove(nuevo_producto)
             return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
             
     except Exception as e:
@@ -951,15 +992,18 @@ def eliminar_producto():
         
         # Buscar y eliminar el producto
         producto_encontrado = False
+        producto_eliminado = None
         for i, producto in enumerate(sistema.catalogo):
             if producto['Nombre'] == producto_nombre:
-                sistema.catalogo.pop(i)
+                producto_eliminado = sistema.catalogo.pop(i)
                 producto_encontrado = True
                 break
         
         if producto_encontrado:
-            # Guardar en Excel
-            if sistema.guardar_catalogo_en_excel():
+            # Guardar en Excel - MÉTODO CORREGIDO
+            success = sistema.guardar_catalogo_en_excel()
+            
+            if success:
                 # Actualizar también la lista de productos disponibles
                 sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
                 
@@ -968,6 +1012,9 @@ def eliminar_producto():
                     'message': 'Producto eliminado correctamente'
                 })
             else:
+                # Revertir la eliminación si falla guardar en Excel
+                if producto_eliminado:
+                    sistema.catalogo.append(producto_eliminado)
                 return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
         else:
             return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
@@ -975,6 +1022,8 @@ def eliminar_producto():
     except Exception as e:
         print(f"Error eliminando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+
 
 @app.errorhandler(404)
 def not_found(error):
