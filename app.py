@@ -6,6 +6,7 @@ import re
 from urllib.parse import unquote
 from functools import wraps
 import pandas as pd
+import numpy as np
 
 app = Flask(__name__)
 app.secret_key = 'pocopan_secure_key_2024_vercel_fixed'
@@ -51,7 +52,7 @@ class SistemaPocopan:
         print("✅ Sistema POCOPAN inicializado correctamente")
 
     def cargar_catalogo_desde_excel(self):
-        """Carga el catálogo desde el archivo Excel - VERSIÓN SUPER ROBUSTA"""
+        """Carga el catálogo desde el archivo Excel - VERSIÓN REPARADA"""
         try:
             print("🔍 Intentando cargar catálogo desde Excel...")
             
@@ -65,6 +66,9 @@ class SistemaPocopan:
             df = pd.read_excel('catalogo.xlsx')
             print(f"✅ Archivo Excel leído. Columnas encontradas: {df.columns.tolist()}")
             print(f"✅ Número de filas: {len(df)}")
+            
+            # Limpiar DataFrame - reemplazar NaN por valores por defecto
+            df = df.replace({np.nan: None})
             
             # Verificar columnas mínimas requeridas
             columnas_requeridas = ['Nombre', 'Precio Venta']
@@ -84,7 +88,7 @@ class SistemaPocopan:
                     nombre = row['Nombre']
                     precio_venta = row['Precio Venta']
                     
-                    if pd.isna(nombre) or pd.isna(precio_venta):
+                    if nombre is None or precio_venta is None:
                         print(f"⚠️ Fila {index} saltada: nombre o precio vacío")
                         continue
                     
@@ -102,10 +106,10 @@ class SistemaPocopan:
                     # Construir producto con manejo seguro de columnas opcionales
                     producto = {
                         'Nombre': nombre_limpio,
-                        'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and pd.notna(row['Categoria']) else 'Sin Categoría',
-                        'Subcategoría': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and pd.notna(row['SubCAT']) else '',
+                        'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and row['Categoria'] is not None else 'Sin Categoría',
+                        'Subcategoría': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and row['SubCAT'] is not None else '',
                         'Precio Venta': precio_float,
-                        'Proveedor': str(row['Proveedor']).strip() if 'Proveedor' in df.columns and pd.notna(row['Proveedor']) else 'Sin Proveedor',
+                        'Proveedor': str(row['Proveedor']).strip() if 'Proveedor' in df.columns and row['Proveedor'] is not None else 'Sin Proveedor',
                         'Estado': 'Disponible'
                     }
                     
@@ -169,14 +173,16 @@ class SistemaPocopan:
                 return
                 
             df = pd.read_excel('ventas.xlsx')
+            df = df.replace({np.nan: None})
             ventas = df.to_dict('records')
             
             # Organizar ventas por terminal
             for venta in ventas:
-                terminal = venta.get('ID_Terminal', 'TODAS')
-                if terminal in self.ventas_memory:
-                    self.ventas_memory[terminal].append(venta)
-                self.ventas_memory['TODAS'].append(venta)
+                if venta:  # Verificar que no sea None
+                    terminal = venta.get('ID_Terminal', 'TODAS')
+                    if terminal in self.ventas_memory:
+                        self.ventas_memory[terminal].append(venta)
+                    self.ventas_memory['TODAS'].append(venta)
                 
             print(f"✅ Ventas cargadas: {len(ventas)} registros")
         except Exception as e:
@@ -196,7 +202,7 @@ class SistemaPocopan:
             print(f"❌ Error cargando contadores: {str(e)}")
 
     def guardar_catalogo_en_excel(self):
-        """Guarda el catálogo actual en el archivo Excel - VERSIÓN SUPER ROBUSTA"""
+        """Guarda el catálogo actual en el archivo Excel - VERSIÓN REPARADA"""
         try:
             if not self.catalogo:
                 print("⚠️ No hay productos en el catálogo para guardar")
@@ -204,7 +210,7 @@ class SistemaPocopan:
 
             print(f"💾 Guardando {len(self.catalogo)} productos en Excel...")
             
-            # Crear DataFrame con todas las columnas necesarias
+            # Crear DataFrame desde el catálogo en memoria
             datos_para_excel = []
             for producto in self.catalogo:
                 datos_para_excel.append({
@@ -218,11 +224,8 @@ class SistemaPocopan:
             
             df_catalogo = pd.DataFrame(datos_para_excel)
             
-            # Asegurar que todas las columnas estén presentes
-            columnas_esperadas = ['Nombre', 'Categoria', 'SubCAT', 'Precio Venta', 'Proveedor', 'Estado']
-            for columna in columnas_esperadas:
-                if columna not in df_catalogo.columns:
-                    df_catalogo[columna] = ""
+            # Reemplazar None por strings vacíos para evitar NaN
+            df_catalogo = df_catalogo.fillna('')
             
             # Guardar en Excel
             df_catalogo.to_excel('catalogo.xlsx', index=False, engine='openpyxl')
@@ -247,6 +250,7 @@ class SistemaPocopan:
             if todas_las_ventas:
                 # Crear DataFrame
                 df_ventas = pd.DataFrame(todas_las_ventas)
+                df_ventas = df_ventas.fillna('')  # Limpiar NaN
 
                 # Guardar en Excel
                 df_ventas.to_excel('ventas.xlsx', index=False, engine='openpyxl')
@@ -269,17 +273,20 @@ class SistemaPocopan:
             print(f"❌ Error guardando contadores: {str(e)}")
             return False
 
-    # ... (el resto de los métodos se mantienen igual)
     def obtener_detalles_producto(self, producto_nombre):
+        """Obtiene detalles de un producto - VERSIÓN REPARADA"""
         if not self.catalogo_cargado or not producto_nombre:
             return None
         
         try:
             nombre_limpio = re.sub(r'\s+', ' ', producto_nombre).strip()
+            print(f"🔍 Buscando producto en memoria: '{nombre_limpio}'")
+            print(f"📦 Total de productos en memoria: {len(self.catalogo)}")
             
-            # Búsqueda exacta
+            # Primero: búsqueda exacta
             for producto in self.catalogo:
                 if producto['Nombre'] == nombre_limpio:
+                    print(f"✅ Producto encontrado (exacto): {producto['Nombre']}")
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
@@ -289,9 +296,10 @@ class SistemaPocopan:
                         'estado': producto['Estado']
                     }
             
-            # Búsqueda case-insensitive
+            # Segundo: búsqueda case-insensitive
             for producto in self.catalogo:
                 if producto['Nombre'].lower() == nombre_limpio.lower():
+                    print(f"✅ Producto encontrado (case-insensitive): {producto['Nombre']}")
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
@@ -301,9 +309,10 @@ class SistemaPocopan:
                         'estado': producto['Estado']
                     }
             
-            # Búsqueda parcial
+            # Tercero: búsqueda parcial
             for producto in self.catalogo:
                 if nombre_limpio.lower() in producto['Nombre'].lower():
+                    print(f"✅ Producto encontrado (parcial): {producto['Nombre']}")
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
@@ -313,10 +322,11 @@ class SistemaPocopan:
                         'estado': producto['Estado']
                     }
             
+            print(f"❌ Producto no encontrado en memoria: {nombre_limpio}")
             return None
             
         except Exception as e:
-            print(f"Error obteniendo detalles: {str(e)}")
+            print(f"❌ Error obteniendo detalles: {str(e)}")
             return None
 
     def buscar_productos(self, query, limit=10):
@@ -336,6 +346,7 @@ class SistemaPocopan:
         except Exception:
             return []
 
+    # ... (resto de los métodos se mantienen igual)
     def agregar_al_carrito(self, carrito_actual, producto_nombre, cantidad):
         try:
             # Validar límite del carrito
@@ -746,17 +757,34 @@ def diagnostico():
 @app.route('/diagnostico-catalogo')
 @admin_required
 def diagnostico_catalogo():
-    """Diagnóstico del catálogo"""
+    """Diagnóstico del catálogo - VERSIÓN REPARADA"""
     try:
         # Leer archivo directamente para diagnóstico
         df = pd.read_excel('catalogo.xlsx')
+        
+        # Limpiar NaN para JSON
+        df_clean = df.replace({np.nan: None})
+        
+        # Convertir a diccionario de manera segura
+        primeras_filas = []
+        for index, row in df_clean.head(3).iterrows():
+            fila_dict = {}
+            for columna, valor in row.items():
+                # Convertir valores que no son serializables
+                if pd.isna(valor):
+                    fila_dict[columna] = None
+                elif isinstance(valor, (pd.Timestamp, datetime)):
+                    fila_dict[columna] = valor.isoformat()
+                else:
+                    fila_dict[columna] = valor
+            primeras_filas.append(fila_dict)
         
         info = {
             'columnas': df.columns.tolist(),
             'filas': len(df),
             'productos_en_memoria': len(sistema.catalogo),
             'catalogo_cargado': sistema.catalogo_cargado,
-            'primeras_filas': df.head(3).to_dict('records')
+            'primeras_filas': primeras_filas
         }
         
         return jsonify(info)
@@ -889,7 +917,7 @@ def finalizar_venta():
     else:
         return jsonify({'success': False, 'message': result}), 400
 
-# === RUTAS DEL EDITOR DE CATÁLOGO - COMPLETAMENTE CORREGIDAS ===
+# === RUTAS DEL EDITOR DE CATÁLOGO - COMPLETAMENTE REPARADAS ===
 @app.route('/editor-catalogo')
 @admin_required
 def editor_catalogo():
@@ -907,7 +935,7 @@ def editor_catalogo():
 @app.route('/obtener-producto/<path:producto_nombre>')
 @admin_required
 def obtener_producto(producto_nombre):
-    """Obtener detalles completos de un producto para editar"""
+    """Obtener detalles completos de un producto para editar - VERSIÓN REPARADA"""
     if sistema is None:
         return jsonify({'error': 'Sistema no disponible'}), 500
         
@@ -939,7 +967,7 @@ def obtener_producto(producto_nombre):
 @app.route('/actualizar-producto', methods=['POST'])
 @admin_required
 def actualizar_producto():
-    """Actualizar un producto en el catálogo - VERSIÓN COMPLETAMENTE FUNCIONAL"""
+    """Actualizar un producto en el catálogo - VERSIÓN REPARADA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
@@ -1010,7 +1038,7 @@ def actualizar_producto():
 @app.route('/agregar-producto', methods=['POST'])
 @admin_required
 def agregar_producto():
-    """Agregar un nuevo producto al catálogo - VERSIÓN COMPLETAMENTE FUNCIONAL"""
+    """Agregar un nuevo producto al catálogo - VERSIÓN REPARADA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
@@ -1080,7 +1108,7 @@ def agregar_producto():
 @app.route('/eliminar-producto', methods=['POST'])
 @admin_required
 def eliminar_producto():
-    """Eliminar un producto del catálogo - VERSIÓN COMPLETAMENTE FUNCIONAL"""
+    """Eliminar un producto del catálogo - VERSIÓN REPARADA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
@@ -1140,4 +1168,3 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
-    
