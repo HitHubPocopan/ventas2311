@@ -230,7 +230,12 @@
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
-            margin-left: 0.5rem;
+        }
+        
+        /* Vista unificada para admin */
+        .vista-unificada {
+            border-left: 4px solid var(--naranja-primario);
+            background: var(--naranja-fondo);
         }
         
         /* Notificaciones */
@@ -313,35 +318,12 @@
         </div>
 
         <!-- Información del dashboard -->
-        <div class="card">
+        <div class="card" id="card-info-dashboard">
             <div class="card-header">
                 <span id="titulo-dashboard">Dashboard - Terminal POS1</span>
             </div>
             <div class="card-body">
                 <p>Estadísticas en tiempo real • <span id="fecha-actual">martes, 25 de noviembre de 2025</span></p>
-            </div>
-        </div>
-
-        <!-- Selector de Terminal (solo admin) -->
-        <div class="card mb-2" id="selector-terminal" style="display: none;">
-            <div class="card-header">
-                🔍 Seleccionar Terminal
-            </div>
-            <div class="card-body" style="padding: 1rem;">
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <a href="/dashboard/TODAS" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">
-                        📊 Todas las Terminales
-                    </a>
-                    <a href="/dashboard/POS1" class="btn btn-outline" style="padding: 8px 16px; font-size: 0.85rem;">
-                        🏪 POS 1
-                    </a>
-                    <a href="/dashboard/POS2" class="btn btn-outline" style="padding: 8px 16px; font-size: 0.85rem;">
-                        🏪 POS 2
-                    </a>
-                    <a href="/dashboard/POS3" class="btn btn-outline" style="padding: 8px 16px; font-size: 0.85rem;">
-                        🏪 POS 3
-                    </a>
-                </div>
             </div>
         </div>
 
@@ -420,6 +402,18 @@
             </div>
         </div>
 
+        <!-- Vista unificada para ADMIN -->
+        <div class="card mb-2" id="vista-unificada-admin" style="display: none;">
+            <div class="card-header vista-unificada">
+                👑 Vista de Administrador - Todas las Terminales Unificadas
+            </div>
+            <div class="card-body">
+                <div class="grid grid-3">
+                    <!-- Se llenará dinámicamente con datos de cada terminal -->
+                </div>
+            </div>
+        </div>
+
         <!-- Sección Inferior - 2 Columnas -->
         <div class="main-layout">
             <!-- Columna Izquierda: Transacciones -->
@@ -467,18 +461,6 @@
             </div>
         </div>
 
-        <!-- Comparación de Terminales (solo admin) -->
-        <div class="card mt-2" id="comparacion-terminales" style="display: none;">
-            <div class="card-header">
-                📈 Comparación entre Terminales
-            </div>
-            <div class="card-body">
-                <div class="grid grid-3" id="grid-comparacion-terminales">
-                    <!-- Se llenará dinámicamente -->
-                </div>
-            </div>
-        </div>
-
         <!-- Acciones Rápidas (al final) -->
         <div class="card mb-2">
             <div class="card-header" style="background: var(--naranja-primario); color: white;">
@@ -505,10 +487,10 @@
 
     <script>
         // Configuración del usuario actual
+        // Cambia estos valores según el usuario que esté logueado
         const usuarioActual = {
-            rol: 'admin', // Cambiar a 'pos' para probar usuario normal
-            terminal: 'POS1',
-            terminalSeleccionada: 'TODAS' // Para admin
+            rol: 'admin', // 'admin' o 'pos'
+            terminal: 'POS1' // Para usuarios POS: 'POS1', 'POS2', 'POS3'
         };
 
         // Actualizar fecha y hora actual
@@ -532,39 +514,25 @@
         
         // Configurar interfaz según el rol
         function configurarInterfazPorRol() {
-            const rol = usuarioActual.rol;
-            const esAdmin = rol === 'admin';
+            const esAdmin = usuarioActual.rol === 'admin';
             
             // Actualizar badge de rol
             document.getElementById('rol-usuario').textContent = esAdmin ? 'Administrador' : 'Usuario POS';
             
-            // Mostrar/ocultar selector de terminal
-            document.getElementById('selector-terminal').style.display = esAdmin ? 'block' : 'none';
-            
             // Actualizar información de terminal
             if (esAdmin) {
-                document.getElementById('terminal-info').textContent = usuarioActual.terminalSeleccionada === 'TODAS' 
-                    ? '- Todas las Terminales' 
-                    : `- Terminal: ${usuarioActual.terminalSeleccionada}`;
-                document.getElementById('subtitulo-transacciones').textContent = usuarioActual.terminalSeleccionada === 'TODAS' 
-                    ? '(Todas las terminales)' 
-                    : '';
-                document.getElementById('subtitulo-productos').textContent = usuarioActual.terminalSeleccionada === 'TODAS' 
-                    ? '(Todas las terminales)' 
-                    : '';
+                document.getElementById('terminal-info').textContent = '- Todas las Terminales';
+                document.getElementById('subtitulo-transacciones').textContent = '(Todas las terminales)';
+                document.getElementById('subtitulo-productos').textContent = '(Todas las terminales)';
+                document.getElementById('titulo-dashboard').textContent = 'Dashboard - Todas las Terminales (Vista Unificada)';
+                document.getElementById('card-info-dashboard').classList.add('vista-unificada');
             } else {
                 document.getElementById('terminal-info').textContent = `- Terminal: ${usuarioActual.terminal}`;
                 document.getElementById('subtitulo-transacciones').textContent = `(Terminal ${usuarioActual.terminal})`;
                 document.getElementById('subtitulo-productos').textContent = `(Terminal ${usuarioActual.terminal})`;
+                document.getElementById('titulo-dashboard').textContent = `Dashboard - Terminal ${usuarioActual.terminal}`;
+                document.getElementById('card-info-dashboard').classList.remove('vista-unificada');
             }
-            
-            // Actualizar título del dashboard
-            const titulo = esAdmin 
-                ? (usuarioActual.terminalSeleccionada === 'TODAS' 
-                    ? 'Dashboard - Todas las Terminales' 
-                    : `Dashboard - Terminal ${usuarioActual.terminalSeleccionada}`)
-                : `Dashboard - Terminal ${usuarioActual.terminal}`;
-            document.getElementById('titulo-dashboard').textContent = titulo;
         }
         
         // Mostrar notificación
@@ -582,11 +550,10 @@
         function cargarEstadisticasAvanzadas() {
             showNotification('🔄 Actualizando datos...', 'info');
             
-            const terminal = usuarioActual.rol === 'admin' 
-                ? usuarioActual.terminalSeleccionada 
-                : usuarioActual.terminal;
+            const esAdmin = usuarioActual.rol === 'admin';
+            const endpoint = esAdmin ? '/estadisticas-unificadas' : `/estadisticas-terminal?terminal=${usuarioActual.terminal}`;
             
-            fetch(`/estadisticas-avanzadas?terminal=${terminal}`)
+            fetch(endpoint)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -594,11 +561,9 @@
                         renderizarTransaccionesHoy(data.transacciones_hoy);
                         renderizarProductosVendidos(data.productos_mas_vendidos);
                         
-                        // Si es admin y está viendo todas las terminales, cargar comparación
-                        if (usuarioActual.rol === 'admin' && usuarioActual.terminalSeleccionada === 'TODAS') {
-                            cargarComparacionTerminales();
-                        } else {
-                            document.getElementById('comparacion-terminales').style.display = 'none';
+                        // Si es admin, cargar vista unificada con datos de todas las terminales
+                        if (esAdmin) {
+                            cargarVistaUnificadaAdmin(data.terminales);
                         }
                         
                         showNotification('✅ Datos actualizados', 'success');
@@ -612,27 +577,13 @@
                 });
         }
         
-        // Cargar comparación de terminales (solo admin)
-        function cargarComparacionTerminales() {
-            fetch('/estadisticas-terminales')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        renderizarComparacionTerminales(data.terminales);
-                        document.getElementById('comparacion-terminales').style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error cargando comparación:', error);
-                });
-        }
-        
-        // Renderizar comparación de terminales
-        function renderizarComparacionTerminales(terminales) {
-            const container = document.getElementById('grid-comparacion-terminales');
+        // Cargar vista unificada para admin
+        function cargarVistaUnificadaAdmin(terminales) {
+            const container = document.getElementById('vista-unificada-admin');
+            const gridContainer = container.querySelector('.grid-3');
             
             if (!terminales || Object.keys(terminales).length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--texto-gris);">No hay datos de terminales</p>';
+                container.style.display = 'none';
                 return;
             }
             
@@ -655,9 +606,13 @@
                                     <span>Ingresos:</span>
                                     <strong>${stats.ingresos_totales || '$0.00'}</strong>
                                 </div>
-                                <div style="display: flex; justify-content: space-between;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
                                     <span>Ventas Hoy:</span>
                                     <strong>${stats.ventas_hoy_count || '0'}</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Productos Vendidos:</span>
+                                    <strong>${stats.productos_vendidos_hoy || '0'}</strong>
                                 </div>
                             </div>
                         </div>
@@ -665,7 +620,8 @@
                 `;
             });
             
-            container.innerHTML = html;
+            gridContainer.innerHTML = html;
+            container.style.display = 'block';
         }
         
         // Actualizar dashboard con datos
@@ -694,6 +650,7 @@
         // Renderizar transacciones
         function renderizarTransaccionesHoy(transacciones) {
             const container = document.getElementById('lista-transacciones-hoy');
+            const esAdmin = usuarioActual.rol === 'admin';
             
             if (!transacciones || transacciones.length === 0) {
                 container.innerHTML = `
@@ -714,16 +671,13 @@
                     minute: '2-digit' 
                 });
                 
-                // Mostrar terminal solo si es admin viendo todas las terminales
-                const mostrarTerminal = usuarioActual.rol === 'admin' && usuarioActual.terminalSeleccionada === 'TODAS';
-                
                 html += `
                     <div style="border: 1px solid var(--naranja-borde); border-radius: 6px; padding: 0.8rem; margin-bottom: 0.6rem; background: white;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
                             <div style="flex: 1;">
                                 <h4 style="color: var(--texto-oscuro); margin: 0 0 0.2rem 0; font-size: 0.9rem;">
                                     ${transaccion.Producto || 'Producto no disponible'}
-                                    ${mostrarTerminal ? `<span class="terminal-indicator">${transaccion.Terminal || 'N/A'}</span>` : ''}
+                                    ${esAdmin ? `<span class="terminal-indicator">${transaccion.Terminal || 'N/A'}</span>` : ''}
                                 </h4>
                                 <div style="display: flex; gap: 0.8rem; font-size: 0.75rem; color: var(--texto-gris);">
                                     <span><strong>Cliente:</strong> ${transaccion.ID_Cliente || 'N/A'}</span>
@@ -749,6 +703,7 @@
         // Renderizar productos vendidos
         function renderizarProductosVendidos(productos) {
             const container = document.getElementById('lista-productos-vendidos');
+            const esAdmin = usuarioActual.rol === 'admin';
             
             if (!productos || productos.length === 0) {
                 container.innerHTML = `
@@ -770,7 +725,10 @@
                             <span style="font-size: 1.2rem;">${medal}</span>
                             <div>
                                 <div style="font-size: 0.9rem; font-weight: 500;">${producto.producto || 'Producto no disponible'}</div>
-                                <div style="font-size: 0.75rem; color: var(--texto-gris);">${producto.cantidad || 0} unidades</div>
+                                <div style="font-size: 0.75rem; color: var(--texto-gris);">
+                                    ${producto.cantidad || 0} unidades
+                                    ${esAdmin ? `<div style="margin-top: 0.2rem;"><span class="terminal-indicator">${producto.terminal || 'Varias terminales'}</span></div>` : ''}
+                                </div>
                             </div>
                         </div>
                         <div style="text-align: right;">
@@ -790,11 +748,10 @@
         function descargarExcel() {
             showNotification('📊 Generando archivo Excel...', 'info');
             
-            const terminal = usuarioActual.rol === 'admin' 
-                ? usuarioActual.terminalSeleccionada 
-                : usuarioActual.terminal;
+            const esAdmin = usuarioActual.rol === 'admin';
+            const endpoint = esAdmin ? '/descargar-excel-unificado' : `/descargar-excel?terminal=${usuarioActual.terminal}`;
             
-            fetch(`/descargar-excel?terminal=${terminal}`)
+            fetch(endpoint)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Error al generar el archivo');
@@ -806,7 +763,13 @@
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = url;
-                    a.download = `ventas_pocopan_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    
+                    const fecha = new Date().toISOString().split('T')[0];
+                    const nombreArchivo = esAdmin 
+                        ? `ventas_pocopan_unificado_${fecha}.xlsx`
+                        : `ventas_pocopan_${usuarioActual.terminal}_${fecha}.xlsx`;
+                    
+                    a.download = nombreArchivo;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
@@ -829,21 +792,6 @@
             // Actualizar cada 30 segundos
             setInterval(cargarEstadisticasAvanzadas, 30000);
         });
-        
-        // Para cambiar entre terminales (solo admin)
-        function cambiarTerminal(terminal) {
-            if (usuarioActual.rol === 'admin') {
-                usuarioActual.terminalSeleccionada = terminal;
-                configurarInterfazPorRol();
-                cargarEstadisticasAvanzadas();
-            }
-        }
-        
-        // Ejemplo: cambiar a todas las terminales
-        // cambiarTerminal('TODAS');
-        
-        // Ejemplo: cambiar a POS2
-        // cambiarTerminal('POS2');
     </script>
 </body>
 </html>
