@@ -51,35 +51,41 @@ class SistemaPocopan:
         print("✅ Sistema POCOPAN inicializado correctamente")
 
     def cargar_catalogo_desde_excel(self):
-        """Carga el catálogo desde el archivo Excel"""
+        """Carga el catálogo desde el archivo Excel - VERSIÓN CORREGIDA"""
         try:
             # Leer el archivo Excel
             df = pd.read_excel('catalogo.xlsx')
+            print(f"✅ Archivo Excel leído. Columnas: {df.columns.tolist()}")
+            print(f"✅ Número de filas: {len(df)}")
 
             # Limpiar y procesar los datos
             self.catalogo = []
 
-            for _, row in df.iterrows():
-                # Verificar que tenga los datos mínimos necesarios
-                if pd.notna(row['Nombre']) and pd.notna(row['Precio Venta']):
-                    producto = {
-                        'Nombre': str(row['Nombre']).strip(),
-                        'Categoría': str(row['Categoria']).strip() if pd.notna(row['Categoria']) else 'Sin Categoría',
-                        'Subcategoría': str(row['SubCAT']).strip() if pd.notna(row['SubCAT']) else '',
-                        'Precio Venta': float(row['Precio Venta']),
-                        'Proveedor': str(row.get('Proveedor', '')).strip() if pd.notna(row.get('Proveedor', '')) else 'Sin Proveedor',
-                        'Estado': 'Disponible'
-                    }
-                    self.catalogo.append(producto)
+            for index, row in df.iterrows():
+                try:
+                    # Verificar que tenga los datos mínimos necesarios
+                    if pd.notna(row['Nombre']) and pd.notna(row['Precio Venta']):
+                        producto = {
+                            'Nombre': str(row['Nombre']).strip(),
+                            'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and pd.notna(row['Categoria']) else 'Sin Categoría',
+                            'Subcategoría': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and pd.notna(row['SubCAT']) else '',
+                            'Precio Venta': float(row['Precio Venta']),
+                            'Proveedor': str(row['Proveedor']).strip() if 'Proveedor' in df.columns and pd.notna(row['Proveedor']) else 'Sin Proveedor',
+                            'Estado': 'Disponible'
+                        }
+                        self.catalogo.append(producto)
+                except Exception as e:
+                    print(f"⚠️ Error procesando fila {index}: {str(e)}")
+                    continue
 
             self.catalogo_cargado = True
             self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
 
-            print(f"✅ Catálogo cargado: {len(self.catalogo)} productos")
+            print(f"✅ Catálogo cargado correctamente: {len(self.catalogo)} productos")
 
         except Exception as e:
-            print(f"❌ Error cargando catálogo: {str(e)}")
-            # Si hay error, crear un catálogo mínimo de emergencia
+            print(f"❌ Error crítico cargando catálogo: {str(e)}")
+            # Crear catálogo de emergencia
             self.crear_catalogo_emergencia()
 
     def cargar_ventas_desde_excel(self):
@@ -109,26 +115,31 @@ class SistemaPocopan:
             print(f"❌ Error cargando contadores: {str(e)}")
 
     def guardar_catalogo_en_excel(self):
-        """Guarda el catálogo actual en el archivo Excel"""
+        """Guarda el catálogo actual en el archivo Excel - VERSIÓN CORREGIDA"""
         try:
+            if not self.catalogo:
+                print("⚠️ No hay productos en el catálogo para guardar")
+                return False
+
             # Crear DataFrame desde el catálogo en memoria
-            df_catalogo = pd.DataFrame(self.catalogo)
-
-            # Renombrar columnas para coincidir con el formato original
-            column_mapping = {
-                'Nombre': 'Nombre',
-                'Categoría': 'Categoria',
-                'Subcategoría': 'SubCAT',
-                'Precio Venta': 'Precio Venta',
-                'Proveedor': 'Proveedor',
-                'Estado': 'Estado'
-            }
-            df_catalogo = df_catalogo.rename(columns=column_mapping)
-
+            datos_para_excel = []
+            for producto in self.catalogo:
+                datos_para_excel.append({
+                    'Nombre': producto['Nombre'],
+                    'Categoria': producto['Categoría'],
+                    'SubCAT': producto['Subcategoría'],
+                    'Precio Venta': producto['Precio Venta'],
+                    'Proveedor': producto['Proveedor'],
+                    'Estado': producto['Estado']
+                })
+            
+            df_catalogo = pd.DataFrame(datos_para_excel)
+            
             # Guardar en Excel
             df_catalogo.to_excel('catalogo.xlsx', index=False)
             print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
             return True
+            
         except Exception as e:
             print(f"❌ Error guardando catálogo en Excel: {str(e)}")
             return False
@@ -664,6 +675,27 @@ def diagnostico():
         'ventas_registradas': sum(len(ventas) for ventas in sistema.ventas_memory.values())
     })
 
+@app.route('/diagnostico-catalogo')
+@admin_required
+def diagnostico_catalogo():
+    """Diagnóstico del catálogo"""
+    try:
+        # Leer archivo directamente para diagnóstico
+        df = pd.read_excel('catalogo.xlsx')
+        
+        info = {
+            'columnas': df.columns.tolist(),
+            'filas': len(df),
+            'productos_en_memoria': len(sistema.catalogo),
+            'catalogo_cargado': sistema.catalogo_cargado,
+            'primeras_filas': df.head(3).to_dict('records')
+        }
+        
+        return jsonify(info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/buscar-productos')
 def buscar_productos_route():
     if sistema is None:
@@ -807,7 +839,7 @@ def editor_catalogo():
 @app.route('/obtener-producto/<path:producto_nombre>')
 @admin_required
 def obtener_producto(producto_nombre):
-    """Obtener detalles completos de un producto para editar"""
+    """Obtener detalles completos de un producto para editar - VERSIÓN CORREGIDA"""
     if sistema is None:
         return jsonify({'error': 'Sistema no disponible'}), 500
         
@@ -815,26 +847,38 @@ def obtener_producto(producto_nombre):
         producto_decodificado = unquote(producto_nombre)
         producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
         
+        print(f"🔍 Buscando producto: '{producto_limpio}'")
+        
         # Buscar producto en el catálogo
         for producto in sistema.catalogo:
             if producto['Nombre'] == producto_limpio:
+                print(f"✅ Producto encontrado: {producto['Nombre']}")
                 return jsonify(producto)
         
+        # Búsqueda case-insensitive si no se encuentra exacto
+        for producto in sistema.catalogo:
+            if producto['Nombre'].lower() == producto_limpio.lower():
+                print(f"✅ Producto encontrado (case-insensitive): {producto['Nombre']}")
+                return jsonify(producto)
+        
+        print(f"❌ Producto no encontrado: {producto_limpio}")
         return jsonify({'error': 'Producto no encontrado'}), 404
             
     except Exception as e:
-        print(f"Error obteniendo producto: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
+        print(f"❌ Error obteniendo producto: {str(e)}")
+        return jsonify({'error': f'Error interno del servidor: {str(e)}'}), 500
 
 @app.route('/actualizar-producto', methods=['POST'])
 @admin_required
 def actualizar_producto():
-    """Actualizar un producto en el catálogo"""
+    """Actualizar un producto en el catálogo - VERSIÓN CORREGIDA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
     try:
         data = request.get_json()
+        print(f"📝 Datos recibidos para actualizar: {data}")
+        
         producto_original = data.get('producto_original', '').strip()
         nuevo_nombre = data.get('nombre', '').strip()
         nueva_categoria = data.get('categoria', '').strip()
@@ -845,6 +889,14 @@ def actualizar_producto():
         if not producto_original or not nuevo_nombre:
             return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
         
+        # Validar precio
+        try:
+            precio_float = float(nuevo_precio)
+            if precio_float <= 0:
+                return jsonify({'success': False, 'message': 'El precio debe ser mayor a 0'}), 400
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Precio inválido'}), 400
+        
         # Buscar y actualizar el producto
         producto_encontrado = False
         for producto in sistema.catalogo:
@@ -853,9 +905,10 @@ def actualizar_producto():
                 producto['Nombre'] = nuevo_nombre
                 producto['Categoría'] = nueva_categoria
                 producto['Subcategoría'] = nueva_subcategoria
-                producto['Precio Venta'] = float(nuevo_precio)
+                producto['Precio Venta'] = precio_float
                 producto['Proveedor'] = nuevo_proveedor
                 producto_encontrado = True
+                print(f"✅ Producto actualizado en memoria: {nuevo_nombre}")
                 break
         
         if producto_encontrado:
@@ -866,33 +919,28 @@ def actualizar_producto():
                 
                 return jsonify({
                     'success': True,
-                    'message': 'Producto actualizado correctamente',
-                    'producto_actualizado': {
-                        'nombre': nuevo_nombre,
-                        'categoria': nueva_categoria,
-                        'subcategoria': nueva_subcategoria,
-                        'precio_venta': float(nuevo_precio),
-                        'proveedor': nuevo_proveedor
-                    }
+                    'message': 'Producto actualizado correctamente'
                 })
             else:
                 return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
         else:
-            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
+            return jsonify({'success': False, 'message': f'Producto no encontrado: {producto_original}'}), 404
             
     except Exception as e:
-        print(f"Error actualizando producto: {str(e)}")
+        print(f"❌ Error actualizando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/agregar-producto', methods=['POST'])
 @admin_required
 def agregar_producto():
-    """Agregar un nuevo producto al catálogo"""
+    """Agregar un nuevo producto al catálogo - VERSIÓN CORREGIDA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
     try:
         data = request.get_json()
+        print(f"📝 Datos recibidos para agregar: {data}")
+        
         nombre = data.get('nombre', '').strip()
         categoria = data.get('categoria', '').strip()
         subcategoria = data.get('subcategoria', '').strip()
@@ -901,6 +949,14 @@ def agregar_producto():
         
         if not nombre:
             return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
+        
+        # Validar precio
+        try:
+            precio_float = float(precio_venta)
+            if precio_float <= 0:
+                return jsonify({'success': False, 'message': 'El precio debe ser mayor a 0'}), 400
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Precio inválido'}), 400
         
         # Verificar si el producto ya existe
         for producto in sistema.catalogo:
@@ -912,12 +968,13 @@ def agregar_producto():
             'Nombre': nombre,
             'Categoría': categoria,
             'Subcategoría': subcategoria,
-            'Precio Venta': float(precio_venta),
+            'Precio Venta': precio_float,
             'Proveedor': proveedor,
             'Estado': 'Disponible'
         }
         
         sistema.catalogo.append(nuevo_producto)
+        print(f"✅ Producto agregado en memoria: {nombre}")
         
         # Guardar en Excel
         if sistema.guardar_catalogo_en_excel():
@@ -925,20 +982,19 @@ def agregar_producto():
             
             return jsonify({
                 'success': True,
-                'message': 'Producto agregado correctamente',
-                'nuevo_producto': nuevo_producto
+                'message': 'Producto agregado correctamente'
             })
         else:
             return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
             
     except Exception as e:
-        print(f"Error agregando producto: {str(e)}")
+        print(f"❌ Error agregando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/eliminar-producto', methods=['POST'])
 @admin_required
 def eliminar_producto():
-    """Eliminar un producto del catálogo"""
+    """Eliminar un producto del catálogo - VERSIÓN CORREGIDA"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
@@ -949,12 +1005,15 @@ def eliminar_producto():
         if not producto_nombre:
             return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
         
+        print(f"🗑️ Intentando eliminar producto: {producto_nombre}")
+        
         # Buscar y eliminar el producto
         producto_encontrado = False
         for i, producto in enumerate(sistema.catalogo):
             if producto['Nombre'] == producto_nombre:
                 sistema.catalogo.pop(i)
                 producto_encontrado = True
+                print(f"✅ Producto eliminado de memoria: {producto_nombre}")
                 break
         
         if producto_encontrado:
@@ -970,10 +1029,10 @@ def eliminar_producto():
             else:
                 return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
         else:
-            return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
+            return jsonify({'success': False, 'message': f'Producto no encontrado: {producto_nombre}'}), 404
             
     except Exception as e:
-        print(f"Error eliminando producto: {str(e)}")
+        print(f"❌ Error eliminando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.errorhandler(404)
@@ -986,3 +1045,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
+    
