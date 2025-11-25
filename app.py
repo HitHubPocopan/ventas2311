@@ -51,29 +51,67 @@ class SistemaPocopan:
         print("✅ Sistema POCOPAN inicializado correctamente")
 
     def cargar_catalogo_desde_excel(self):
-        """Carga el catálogo desde el archivo Excel - VERSIÓN CORREGIDA"""
+        """Carga el catálogo desde el archivo Excel - VERSIÓN SUPER ROBUSTA"""
         try:
+            print("🔍 Intentando cargar catálogo desde Excel...")
+            
+            # Verificar si el archivo existe
+            if not os.path.exists('catalogo.xlsx'):
+                print("❌ Archivo catalogo.xlsx no encontrado")
+                self.crear_catalogo_emergencia()
+                return
+            
             # Leer el archivo Excel
             df = pd.read_excel('catalogo.xlsx')
-            print(f"✅ Archivo Excel leído. Columnas: {df.columns.tolist()}")
+            print(f"✅ Archivo Excel leído. Columnas encontradas: {df.columns.tolist()}")
             print(f"✅ Número de filas: {len(df)}")
+            
+            # Verificar columnas mínimas requeridas
+            columnas_requeridas = ['Nombre', 'Precio Venta']
+            for columna in columnas_requeridas:
+                if columna not in df.columns:
+                    print(f"❌ Columna requerida no encontrada: {columna}")
+                    self.crear_catalogo_emergencia()
+                    return
 
             # Limpiar y procesar los datos
             self.catalogo = []
+            productos_cargados = 0
 
             for index, row in df.iterrows():
                 try:
                     # Verificar que tenga los datos mínimos necesarios
-                    if pd.notna(row['Nombre']) and pd.notna(row['Precio Venta']):
-                        producto = {
-                            'Nombre': str(row['Nombre']).strip(),
-                            'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and pd.notna(row['Categoria']) else 'Sin Categoría',
-                            'Subcategoría': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and pd.notna(row['SubCAT']) else '',
-                            'Precio Venta': float(row['Precio Venta']),
-                            'Proveedor': str(row['Proveedor']).strip() if 'Proveedor' in df.columns and pd.notna(row['Proveedor']) else 'Sin Proveedor',
-                            'Estado': 'Disponible'
-                        }
-                        self.catalogo.append(producto)
+                    nombre = row['Nombre']
+                    precio_venta = row['Precio Venta']
+                    
+                    if pd.isna(nombre) or pd.isna(precio_venta):
+                        print(f"⚠️ Fila {index} saltada: nombre o precio vacío")
+                        continue
+                    
+                    # Convertir y limpiar datos
+                    nombre_limpio = str(nombre).strip()
+                    if not nombre_limpio:
+                        continue
+                    
+                    try:
+                        precio_float = float(precio_venta)
+                    except (ValueError, TypeError):
+                        print(f"⚠️ Fila {index} saltada: precio inválido '{precio_venta}'")
+                        continue
+                    
+                    # Construir producto
+                    producto = {
+                        'Nombre': nombre_limpio,
+                        'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and pd.notna(row['Categoria']) else 'Sin Categoría',
+                        'Subcategoría': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and pd.notna(row['SubCAT']) else '',
+                        'Precio Venta': precio_float,
+                        'Proveedor': str(row['Proveedor']).strip() if 'Proveedor' in df.columns and pd.notna(row['Proveedor']) else 'Sin Proveedor',
+                        'Estado': 'Disponible'
+                    }
+                    
+                    self.catalogo.append(producto)
+                    productos_cargados += 1
+                    
                 except Exception as e:
                     print(f"⚠️ Error procesando fila {index}: {str(e)}")
                     continue
@@ -81,16 +119,55 @@ class SistemaPocopan:
             self.catalogo_cargado = True
             self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
 
-            print(f"✅ Catálogo cargado correctamente: {len(self.catalogo)} productos")
+            print(f"✅ Catálogo cargado correctamente: {productos_cargados} productos de {len(df)} filas procesadas")
 
         except Exception as e:
             print(f"❌ Error crítico cargando catálogo: {str(e)}")
+            import traceback
+            traceback.print_exc()
             # Crear catálogo de emergencia
             self.crear_catalogo_emergencia()
+
+    def crear_catalogo_emergencia(self):
+        """Crea un catálogo mínimo en caso de error"""
+        print("🆘 Creando catálogo de emergencia...")
+        self.catalogo = [
+            {
+                'Nombre': 'Cajas Verdes GRANJA ANIMALES DINOS',
+                'Categoría': 'Ingenio', 
+                'Subcategoría': 'Madera Ingenio',
+                'Precio Venta': 25000.0, 
+                'Proveedor': 'Proveedor A', 
+                'Estado': 'Disponible'
+            },
+            {
+                'Nombre': 'Pezca Gusanos', 
+                'Categoría': 'Ingenio', 
+                'Subcategoría': 'Madera Ingenio',
+                'Precio Venta': 30800.0, 
+                'Proveedor': 'Proveedor B', 
+                'Estado': 'Disponible'
+            },
+            {
+                'Nombre': 'rompezabeza tubo 150 PIEZAS',
+                'Categoría': 'Ingenio',
+                'Subcategoría': 'RompeCabezas',
+                'Precio Venta': 15000.0,
+                'Proveedor': 'Proveedor C',
+                'Estado': 'Disponible'
+            }
+        ]
+        self.catalogo_cargado = True
+        self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
+        print("✅ Catálogo de emergencia creado con 3 productos")
 
     def cargar_ventas_desde_excel(self):
         """Carga las ventas desde el archivo Excel a memoria"""
         try:
+            if not os.path.exists('ventas.xlsx'):
+                print("ℹ️ Archivo ventas.xlsx no encontrado, se creará vacío")
+                return
+                
             df = pd.read_excel('ventas.xlsx')
             ventas = df.to_dict('records')
             
@@ -108,6 +185,10 @@ class SistemaPocopan:
     def cargar_contadores_desde_json(self):
         """Carga los contadores desde el archivo JSON"""
         try:
+            if not os.path.exists('contadores.json'):
+                print("ℹ️ Archivo contadores.json no encontrado, se usarán contadores por defecto")
+                return
+                
             with open('contadores.json', 'r') as f:
                 self.contadores_memory = json.load(f)
             print("✅ Contadores cargados")
@@ -115,12 +196,14 @@ class SistemaPocopan:
             print(f"❌ Error cargando contadores: {str(e)}")
 
     def guardar_catalogo_en_excel(self):
-        """Guarda el catálogo actual en el archivo Excel - VERSIÓN CORREGIDA"""
+        """Guarda el catálogo actual en el archivo Excel - VERSIÓN SUPER ROBUSTA"""
         try:
             if not self.catalogo:
                 print("⚠️ No hay productos en el catálogo para guardar")
                 return False
 
+            print(f"💾 Guardando {len(self.catalogo)} productos en Excel...")
+            
             # Crear DataFrame desde el catálogo en memoria
             datos_para_excel = []
             for producto in self.catalogo:
@@ -136,12 +219,14 @@ class SistemaPocopan:
             df_catalogo = pd.DataFrame(datos_para_excel)
             
             # Guardar en Excel
-            df_catalogo.to_excel('catalogo.xlsx', index=False)
+            df_catalogo.to_excel('catalogo.xlsx', index=False, engine='openpyxl')
             print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
             return True
             
         except Exception as e:
             print(f"❌ Error guardando catálogo en Excel: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def guardar_ventas_en_excel(self):
@@ -158,7 +243,7 @@ class SistemaPocopan:
                 df_ventas = pd.DataFrame(todas_las_ventas)
 
                 # Guardar en Excel
-                df_ventas.to_excel('ventas.xlsx', index=False)
+                df_ventas.to_excel('ventas.xlsx', index=False, engine='openpyxl')
                 print(f"✅ Ventas guardadas en Excel: {len(todas_las_ventas)} registros")
             else:
                 print("ℹ️ No hay ventas para guardar")
@@ -178,30 +263,7 @@ class SistemaPocopan:
             print(f"❌ Error guardando contadores: {str(e)}")
             return False
 
-    def crear_catalogo_emergencia(self):
-        """Crea un catálogo mínimo en caso de error"""
-        self.catalogo = [
-            {
-                'Nombre': 'Cajas Verdes GRANJA ANIMALES DINOS',
-                'Categoría': 'Ingenio', 
-                'Subcategoría': 'Madera Ingenio',
-                'Precio Venta': 25000, 
-                'Proveedor': 'Proveedor A', 
-                'Estado': 'Disponible'
-            },
-            {
-                'Nombre': 'Pezca Gusanos', 
-                'Categoría': 'Ingenio', 
-                'Subcategoría': 'Madera Ingenio',
-                'Precio Venta': 30800, 
-                'Proveedor': 'Proveedor B', 
-                'Estado': 'Disponible'
-            }
-        ]
-        self.catalogo_cargado = True
-        self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
-        print("⚠️ Catálogo de emergencia cargado")
-
+    # ... (el resto de los métodos se mantienen igual)
     def obtener_detalles_producto(self, producto_nombre):
         if not self.catalogo_cargado or not producto_nombre:
             return None
@@ -1045,4 +1107,3 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
-    

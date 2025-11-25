@@ -500,3 +500,79 @@ nav .btn {
 .fade-in {
     animation: fadeIn 0.3s ease;
 }
+.scroll-container-fixed {
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid var(--naranja-borde);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--blanco);
+}
+
+.scroll-container-medium {
+    max-height: 40vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid var(--naranja-borde);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--blanco);
+}
+
+.scroll-container-small {
+    max-height: 30vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid var(--naranja-borde);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--blanco);
+}
+
+/* Scroll personalizado */
+.scroll-container-fixed::-webkit-scrollbar,
+.scroll-container-medium::-webkit-scrollbar,
+.scroll-container-small::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scroll-container-fixed::-webkit-scrollbar-track,
+.scroll-container-medium::-webkit-scrollbar-track,
+.scroll-container-small::-webkit-scrollbar-track {
+    background: var(--gris-medio);
+    border-radius: 4px;
+}
+
+.scroll-container-fixed::-webkit-scrollbar-thumb,
+.scroll-container-medium::-webkit-scrollbar-thumb,
+.scroll-container-small::-webkit-scrollbar-thumb {
+    background: var(--naranja-primario);
+    border-radius: 4px;
+}
+
+.scroll-container-fixed::-webkit-scrollbar-thumb:hover,
+.scroll-container-medium::-webkit-scrollbar-thumb:hover,
+.scroll-container-small::-webkit-scrollbar-thumb:hover {
+    background: var(--naranja-oscuro);
+}
+
+/* Para el editor de catálogo específicamente */
+.catalogo-scroll {
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Para el punto de venta */
+.pos-productos-scroll {
+    max-height: 65vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.pos-carrito-scroll {
+    max-height: 50vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
