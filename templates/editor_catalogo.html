@@ -129,7 +129,6 @@
     </div>
 </div>
 
-<!-- Los modales se mantienen igual -->
 <!-- Modal para Editar Producto -->
 <div id="modal-editar" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;">
     <div class="card" style="width: 90%; max-width: 600px; margin: 2rem;">
@@ -189,7 +188,12 @@
     // Función para diagnosticar el catálogo
     function diagnosticarCatalogo() {
         fetch('/diagnostico-catalogo')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log('🔍 Diagnóstico del catálogo:', data);
                 alert(`Diagnóstico del Catálogo:\n\n` +
@@ -200,7 +204,7 @@
             })
             .catch(error => {
                 console.error('Error en diagnóstico:', error);
-                alert('Error al realizar diagnóstico');
+                alert('Error al realizar diagnóstico: ' + error.message);
             });
     }
 
@@ -234,27 +238,33 @@
         filtrarProductos();
     }
 
-    // Editar producto
+    // Editar producto - VERSIÓN MEJORADA
     function editarProducto(nombreProducto) {
         productoEditando = nombreProducto;
+        
+        console.log(`📝 Editando producto: ${nombreProducto}`);
+        
+        // Mostrar indicador de carga
+        showNotification('Cargando producto...', 'info');
         
         fetch('/obtener-producto/' + encodeURIComponent(nombreProducto))
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
                 }
                 return response.json();
             })
             .then(producto => {
                 if (producto.error) {
-                    showNotification(producto.error, 'error');
+                    showNotification('Error: ' + producto.error, 'error');
                     return;
                 }
                 mostrarModalEditar(producto);
+                showNotification('Producto cargado correctamente', 'success');
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error al cargar producto', 'error');
+                showNotification('Error al cargar producto: ' + error.message, 'error');
             });
     }
 
@@ -316,6 +326,24 @@
             return;
         }
 
+        // Validar que el precio sea un número válido
+        if (isNaN(parseFloat(nuevoPrecio)) || parseFloat(nuevoPrecio) <= 0) {
+            showNotification('El precio debe ser un número mayor a 0', 'error');
+            return;
+        }
+
+        console.log('📤 Enviando datos de actualización:', {
+            producto_original: productoOriginal,
+            nombre: nuevoNombre,
+            categoria: nuevaCategoria,
+            subcategoria: nuevaSubcategoria,
+            precio_venta: nuevoPrecio,
+            proveedor: nuevoProveedor
+        });
+
+        // Mostrar indicador de carga
+        showNotification('Actualizando producto...', 'info');
+
         fetch('/actualizar-producto', {
             method: 'POST',
             headers: {
@@ -326,26 +354,32 @@
                 nombre: nuevoNombre,
                 categoria: nuevaCategoria,
                 subcategoria: nuevaSubcategoria,
-                precio_venta: nuevoPrecio,
+                precio_venta: parseFloat(nuevoPrecio),
                 proveedor: nuevoProveedor
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('📥 Respuesta recibida:', data);
             if (data.success) {
                 showNotification(data.message, 'success');
                 cerrarModalEditar();
                 // Recargar la página para ver los cambios
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 1500);
             } else {
                 showNotification(data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('Error al guardar cambios', 'error');
+            showNotification('Error al guardar cambios: ' + error.message, 'error');
         });
     }
 
@@ -354,7 +388,7 @@
         productoEditando = null;
     }
 
-    // Agregar producto
+    // Agregar producto - VERSIÓN MEJORADA
     function mostrarModalAgregar() {
         document.getElementById('modal-agregar').style.display = 'flex';
     }
@@ -378,6 +412,23 @@
             return;
         }
 
+        // Validar que el precio sea un número válido
+        if (isNaN(parseFloat(precio)) || parseFloat(precio) <= 0) {
+            showNotification('El precio debe ser un número mayor a 0', 'error');
+            return;
+        }
+
+        console.log('📤 Enviando datos para agregar:', {
+            nombre: nombre,
+            categoria: categoria,
+            subcategoria: subcategoria,
+            precio_venta: precio,
+            proveedor: proveedor
+        });
+
+        // Mostrar indicador de carga
+        showNotification('Agregando producto...', 'info');
+
         fetch('/agregar-producto', {
             method: 'POST',
             headers: {
@@ -387,34 +438,45 @@
                 nombre: nombre,
                 categoria: categoria,
                 subcategoria: subcategoria,
-                precio_venta: precio,
+                precio_venta: parseFloat(precio),
                 proveedor: proveedor
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('📥 Respuesta recibida:', data);
             if (data.success) {
                 showNotification(data.message, 'success');
                 cerrarModalAgregar();
                 // Recargar la página para ver los cambios
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 1500);
             } else {
                 showNotification(data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('Error al agregar producto', 'error');
+            showNotification('Error al agregar producto: ' + error.message, 'error');
         });
     });
 
-    // Eliminar producto
+    // Eliminar producto - VERSIÓN MEJORADA
     function eliminarProducto(nombreProducto) {
-        if (!confirm(`¿Estás seguro de eliminar el producto "${nombreProducto}"? Esta acción no se puede deshacer.`)) {
+        if (!confirm(`¿Estás seguro de eliminar el producto "${nombreProducto}"?\n\nEsta acción no se puede deshacer.`)) {
             return;
         }
+
+        console.log(`🗑️ Eliminando producto: ${nombreProducto}`);
+
+        // Mostrar indicador de carga
+        showNotification('Eliminando producto...', 'info');
 
         fetch('/eliminar-producto', {
             method: 'POST',
@@ -425,21 +487,27 @@
                 producto_nombre: nombreProducto
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('📥 Respuesta recibida:', data);
             if (data.success) {
                 showNotification(data.message, 'success');
                 // Recargar la página para ver los cambios
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 1500);
             } else {
                 showNotification(data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('Error al eliminar producto', 'error');
+            showNotification('Error al eliminar producto: ' + error.message, 'error');
         });
     }
 

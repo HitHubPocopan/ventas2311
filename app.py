@@ -99,7 +99,7 @@ class SistemaPocopan:
                         print(f"⚠️ Fila {index} saltada: precio inválido '{precio_venta}'")
                         continue
                     
-                    # Construir producto
+                    # Construir producto con manejo seguro de columnas opcionales
                     producto = {
                         'Nombre': nombre_limpio,
                         'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and pd.notna(row['Categoria']) else 'Sin Categoría',
@@ -204,7 +204,7 @@ class SistemaPocopan:
 
             print(f"💾 Guardando {len(self.catalogo)} productos en Excel...")
             
-            # Crear DataFrame desde el catálogo en memoria
+            # Crear DataFrame con todas las columnas necesarias
             datos_para_excel = []
             for producto in self.catalogo:
                 datos_para_excel.append({
@@ -217,6 +217,12 @@ class SistemaPocopan:
                 })
             
             df_catalogo = pd.DataFrame(datos_para_excel)
+            
+            # Asegurar que todas las columnas estén presentes
+            columnas_esperadas = ['Nombre', 'Categoria', 'SubCAT', 'Precio Venta', 'Proveedor', 'Estado']
+            for columna in columnas_esperadas:
+                if columna not in df_catalogo.columns:
+                    df_catalogo[columna] = ""
             
             # Guardar en Excel
             df_catalogo.to_excel('catalogo.xlsx', index=False, engine='openpyxl')
@@ -883,7 +889,7 @@ def finalizar_venta():
     else:
         return jsonify({'success': False, 'message': result}), 400
 
-# === RUTAS DEL EDITOR DE CATÁLOGO ===
+# === RUTAS DEL EDITOR DE CATÁLOGO - COMPLETAMENTE CORREGIDAS ===
 @app.route('/editor-catalogo')
 @admin_required
 def editor_catalogo():
@@ -901,7 +907,7 @@ def editor_catalogo():
 @app.route('/obtener-producto/<path:producto_nombre>')
 @admin_required
 def obtener_producto(producto_nombre):
-    """Obtener detalles completos de un producto para editar - VERSIÓN CORREGIDA"""
+    """Obtener detalles completos de un producto para editar"""
     if sistema is None:
         return jsonify({'error': 'Sistema no disponible'}), 500
         
@@ -933,12 +939,19 @@ def obtener_producto(producto_nombre):
 @app.route('/actualizar-producto', methods=['POST'])
 @admin_required
 def actualizar_producto():
-    """Actualizar un producto en el catálogo - VERSIÓN CORREGIDA"""
+    """Actualizar un producto en el catálogo - VERSIÓN COMPLETAMENTE FUNCIONAL"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
     try:
+        # Verificar que los datos son JSON
+        if not request.is_json:
+            return jsonify({'success': False, 'message': 'Content-Type debe ser application/json'}), 400
+            
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No se recibieron datos JSON'}), 400
+        
         print(f"📝 Datos recibidos para actualizar: {data}")
         
         producto_original = data.get('producto_original', '').strip()
@@ -956,7 +969,7 @@ def actualizar_producto():
             precio_float = float(nuevo_precio)
             if precio_float <= 0:
                 return jsonify({'success': False, 'message': 'El precio debe ser mayor a 0'}), 400
-        except ValueError:
+        except (ValueError, TypeError):
             return jsonify({'success': False, 'message': 'Precio inválido'}), 400
         
         # Buscar y actualizar el producto
@@ -981,7 +994,7 @@ def actualizar_producto():
                 
                 return jsonify({
                     'success': True,
-                    'message': 'Producto actualizado correctamente'
+                    'message': f'Producto "{nuevo_nombre}" actualizado correctamente'
                 })
             else:
                 return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
@@ -990,17 +1003,26 @@ def actualizar_producto():
             
     except Exception as e:
         print(f"❌ Error actualizando producto: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/agregar-producto', methods=['POST'])
 @admin_required
 def agregar_producto():
-    """Agregar un nuevo producto al catálogo - VERSIÓN CORREGIDA"""
+    """Agregar un nuevo producto al catálogo - VERSIÓN COMPLETAMENTE FUNCIONAL"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
     try:
+        # Verificar que los datos son JSON
+        if not request.is_json:
+            return jsonify({'success': False, 'message': 'Content-Type debe ser application/json'}), 400
+            
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No se recibieron datos JSON'}), 400
+        
         print(f"📝 Datos recibidos para agregar: {data}")
         
         nombre = data.get('nombre', '').strip()
@@ -1017,21 +1039,21 @@ def agregar_producto():
             precio_float = float(precio_venta)
             if precio_float <= 0:
                 return jsonify({'success': False, 'message': 'El precio debe ser mayor a 0'}), 400
-        except ValueError:
+        except (ValueError, TypeError):
             return jsonify({'success': False, 'message': 'Precio inválido'}), 400
         
         # Verificar si el producto ya existe
         for producto in sistema.catalogo:
             if producto['Nombre'].lower() == nombre.lower():
-                return jsonify({'success': False, 'message': 'El producto ya existe'}), 400
+                return jsonify({'success': False, 'message': f'El producto "{nombre}" ya existe'}), 400
         
         # Crear nuevo producto
         nuevo_producto = {
             'Nombre': nombre,
-            'Categoría': categoria,
+            'Categoría': categoria or 'Sin Categoría',
             'Subcategoría': subcategoria,
             'Precio Venta': precio_float,
-            'Proveedor': proveedor,
+            'Proveedor': proveedor or 'Sin Proveedor',
             'Estado': 'Disponible'
         }
         
@@ -1044,24 +1066,33 @@ def agregar_producto():
             
             return jsonify({
                 'success': True,
-                'message': 'Producto agregado correctamente'
+                'message': f'Producto "{nombre}" agregado correctamente'
             })
         else:
             return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
             
     except Exception as e:
         print(f"❌ Error agregando producto: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/eliminar-producto', methods=['POST'])
 @admin_required
 def eliminar_producto():
-    """Eliminar un producto del catálogo - VERSIÓN CORREGIDA"""
+    """Eliminar un producto del catálogo - VERSIÓN COMPLETAMENTE FUNCIONAL"""
     if sistema is None:
         return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
         
     try:
+        # Verificar que los datos son JSON
+        if not request.is_json:
+            return jsonify({'success': False, 'message': 'Content-Type debe ser application/json'}), 400
+            
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No se recibieron datos JSON'}), 400
+        
         producto_nombre = data.get('producto_nombre', '').strip()
         
         if not producto_nombre:
@@ -1086,7 +1117,7 @@ def eliminar_producto():
                 
                 return jsonify({
                     'success': True,
-                    'message': 'Producto eliminado correctamente'
+                    'message': f'Producto "{producto_nombre}" eliminado correctamente'
                 })
             else:
                 return jsonify({'success': False, 'message': 'Error al guardar en Excel'}), 500
@@ -1095,6 +1126,8 @@ def eliminar_producto():
             
     except Exception as e:
         print(f"❌ Error eliminando producto: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.errorhandler(404)
@@ -1107,3 +1140,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
+    
