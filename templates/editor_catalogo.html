@@ -4,7 +4,6 @@
 
 {% block content %}
 <div class="fade-in">
-    <!-- Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <div>
             <h1 style="color: var(--naranja-primario); margin-bottom: 0.5rem;">Editor de Catálogo</h1>
@@ -17,7 +16,6 @@
         </div>
     </div>
 
-    <!-- Estadísticas -->
     <div class="grid grid-3 mb-3">
         <div class="card">
             <div class="card-body text-center">
@@ -49,7 +47,6 @@
         </div>
     </div>
 
-    <!-- Búsqueda y Filtros -->
     <div class="card mb-3">
         <div class="card-body">
             <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: end;">
@@ -73,13 +70,11 @@
                 </div>
                 <div>
                     <button onclick="limpiarFiltros()" class="btn btn-outline">Limpiar Filtros</button>
-                    <button onclick="diagnosticarCatalogo()" class="btn btn-outline" style="margin-left: 10px;">🔍 Diagnosticar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Lista de Productos CON SCROLL FIJO -->
     <div class="card">
         <div class="card-header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -129,7 +124,6 @@
     </div>
 </div>
 
-<!-- Modal para Editar Producto -->
 <div id="modal-editar" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;">
     <div class="card" style="width: 90%; max-width: 600px; margin: 2rem;">
         <div class="card-header">
@@ -137,13 +131,11 @@
         </div>
         <div class="card-body">
             <div id="form-editar">
-                <!-- El formulario se carga aquí dinámicamente -->
-            </div>
+                </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para Agregar Producto -->
 <div id="modal-agregar" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000;">
     <div class="card" style="width: 90%; max-width: 600px; margin: 2rem;">
         <div class="card-header">
@@ -183,32 +175,7 @@
 
 {% block scripts %}
 <script>
-    let productoEditando = null;
-
-    // Función para diagnosticar el catálogo
-    function diagnosticarCatalogo() {
-        fetch('/diagnostico-catalogo')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('🔍 Diagnóstico del catálogo:', data);
-                alert(`Diagnóstico del Catálogo:\n\n` +
-                      `Columnas: ${data.columnas?.join(', ') || 'N/A'}\n` +
-                      `Filas en Excel: ${data.filas || 0}\n` +
-                      `Productos en memoria: ${data.productos_en_memoria || 0}\n` +
-                      `Catálogo cargado: ${data.catalogo_cargado ? 'Sí' : 'No'}`);
-            })
-            .catch(error => {
-                console.error('Error en diagnóstico:', error);
-                alert('Error al realizar diagnóstico: ' + error.message);
-            });
-    }
-
-    // Filtrado de productos
+    // --- LÓGICA DE FILTRADO ---
     function filtrarProductos() {
         const query = document.getElementById('buscarProducto').value.toLowerCase();
         const categoria = document.getElementById('filtroCategoria').value;
@@ -228,7 +195,6 @@
                 producto.style.display = 'none';
             }
         });
-        
         document.getElementById('contador-productos').textContent = visibleCount + ' productos';
     }
 
@@ -238,40 +204,28 @@
         filtrarProductos();
     }
 
-    // Editar producto - VERSIÓN MEJORADA
+    // --- LÓGICA DE EDICIÓN ---
     function editarProducto(nombreProducto) {
-        productoEditando = nombreProducto;
-        
-        console.log(`📝 Editando producto: ${nombreProducto}`);
-        
-        // Mostrar indicador de carga
         showNotification('Cargando producto...', 'info');
         
+        // encodeURIComponent es crucial para nombres con espacios o símbolos
         fetch('/obtener-producto/' + encodeURIComponent(nombreProducto))
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(producto => {
                 if (producto.error) {
                     showNotification('Error: ' + producto.error, 'error');
                     return;
                 }
                 mostrarModalEditar(producto);
-                showNotification('Producto cargado correctamente', 'success');
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error al cargar producto: ' + error.message, 'error');
+                showNotification('Error al cargar producto', 'error');
             });
     }
 
     function mostrarModalEditar(producto) {
-        const modal = document.getElementById('modal-editar');
         const formulario = document.getElementById('form-editar');
-        
         formulario.innerHTML = `
             <form onsubmit="guardarCambios(event)">
                 <input type="hidden" id="producto-original" value="${producto.Nombre}">
@@ -280,115 +234,68 @@
                     <label class="form-label">Nombre del Producto *</label>
                     <input type="text" id="edit-nombre" class="form-control" value="${producto.Nombre}" required>
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">Categoría</label>
                     <input type="text" id="edit-categoria" class="form-control" value="${producto.Categoría || ''}">
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">Subcategoría</label>
                     <input type="text" id="edit-subcategoria" class="form-control" value="${producto.Subcategoría || ''}">
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">Precio de Venta *</label>
                     <input type="number" id="edit-precio" class="form-control" value="${producto['Precio Venta']}" step="0.01" min="0" required>
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">Proveedor</label>
                     <input type="text" id="edit-proveedor" class="form-control" value="${producto.Proveedor || ''}">
                 </div>
-                
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" onclick="cerrarModalEditar()" class="btn btn-outline">Cancelar</button>
+                    <button type="button" onclick="document.getElementById('modal-editar').style.display='none'" class="btn btn-outline">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                 </div>
             </form>
         `;
-        
-        modal.style.display = 'flex';
+        document.getElementById('modal-editar').style.display = 'flex';
     }
 
     function guardarCambios(event) {
         event.preventDefault();
         
-        const productoOriginal = document.getElementById('producto-original').value;
-        const nuevoNombre = document.getElementById('edit-nombre').value;
-        const nuevaCategoria = document.getElementById('edit-categoria').value;
-        const nuevaSubcategoria = document.getElementById('edit-subcategoria').value;
-        const nuevoPrecio = document.getElementById('edit-precio').value;
-        const nuevoProveedor = document.getElementById('edit-proveedor').value;
-        
-        if (!nuevoNombre || !nuevoPrecio) {
-            showNotification('Nombre y precio son requeridos', 'error');
+        const data = {
+            producto_original: document.getElementById('producto-original').value,
+            nombre: document.getElementById('edit-nombre').value,
+            categoria: document.getElementById('edit-categoria').value,
+            subcategoria: document.getElementById('edit-subcategoria').value,
+            precio_venta: parseFloat(document.getElementById('edit-precio').value),
+            proveedor: document.getElementById('edit-proveedor').value
+        };
+
+        if (!data.nombre || isNaN(data.precio_venta)) {
+            showNotification('Nombre y precio válidos son requeridos', 'error');
             return;
         }
 
-        // Validar que el precio sea un número válido
-        if (isNaN(parseFloat(nuevoPrecio)) || parseFloat(nuevoPrecio) <= 0) {
-            showNotification('El precio debe ser un número mayor a 0', 'error');
-            return;
-        }
-
-        console.log('📤 Enviando datos de actualización:', {
-            producto_original: productoOriginal,
-            nombre: nuevoNombre,
-            categoria: nuevaCategoria,
-            subcategoria: nuevaSubcategoria,
-            precio_venta: nuevoPrecio,
-            proveedor: nuevoProveedor
-        });
-
-        // Mostrar indicador de carga
-        showNotification('Actualizando producto...', 'info');
+        showNotification('Actualizando...', 'info');
 
         fetch('/actualizar-producto', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                producto_original: productoOriginal,
-                nombre: nuevoNombre,
-                categoria: nuevaCategoria,
-                subcategoria: nuevaSubcategoria,
-                precio_venta: parseFloat(nuevoPrecio),
-                proveedor: nuevoProveedor
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('📥 Respuesta recibida:', data);
             if (data.success) {
-                showNotification(data.message, 'success');
-                cerrarModalEditar();
-                // Recargar la página para ver los cambios
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                alert('Producto actualizado correctamente');
+                window.location.reload();
             } else {
                 showNotification(data.message, 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error al guardar cambios: ' + error.message, 'error');
-        });
+        .catch(error => showNotification('Error al guardar: ' + error, 'error'));
     }
 
-    function cerrarModalEditar() {
-        document.getElementById('modal-editar').style.display = 'none';
-        productoEditando = null;
-    }
-
-    // Agregar producto - VERSIÓN MEJORADA
+    // --- LÓGICA DE AGREGAR ---
     function mostrarModalAgregar() {
         document.getElementById('modal-agregar').style.display = 'flex';
     }
@@ -401,133 +308,75 @@
     document.getElementById('form-agregar').addEventListener('submit', function(event) {
         event.preventDefault();
         
-        const nombre = document.getElementById('nuevo-nombre').value;
-        const categoria = document.getElementById('nueva-categoria').value;
-        const subcategoria = document.getElementById('nueva-subcategoria').value;
-        const precio = document.getElementById('nuevo-precio').value;
-        const proveedor = document.getElementById('nuevo-proveedor').value;
-        
-        if (!nombre || !precio) {
-            showNotification('Nombre y precio son requeridos', 'error');
+        const data = {
+            nombre: document.getElementById('nuevo-nombre').value,
+            categoria: document.getElementById('nueva-categoria').value,
+            subcategoria: document.getElementById('nueva-subcategoria').value,
+            precio_venta: parseFloat(document.getElementById('nuevo-precio').value),
+            proveedor: document.getElementById('nuevo-proveedor').value
+        };
+
+        if (!data.nombre || isNaN(data.precio_venta)) {
+            showNotification('Nombre y precio válidos son requeridos', 'error');
             return;
         }
 
-        // Validar que el precio sea un número válido
-        if (isNaN(parseFloat(precio)) || parseFloat(precio) <= 0) {
-            showNotification('El precio debe ser un número mayor a 0', 'error');
-            return;
-        }
-
-        console.log('📤 Enviando datos para agregar:', {
-            nombre: nombre,
-            categoria: categoria,
-            subcategoria: subcategoria,
-            precio_venta: precio,
-            proveedor: proveedor
-        });
-
-        // Mostrar indicador de carga
-        showNotification('Agregando producto...', 'info');
+        showNotification('Agregando...', 'info');
 
         fetch('/agregar-producto', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                nombre: nombre,
-                categoria: categoria,
-                subcategoria: subcategoria,
-                precio_venta: parseFloat(precio),
-                proveedor: proveedor
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('📥 Respuesta recibida:', data);
             if (data.success) {
-                showNotification(data.message, 'success');
-                cerrarModalAgregar();
-                // Recargar la página para ver los cambios
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                alert('Producto agregado correctamente');
+                window.location.reload();
             } else {
                 showNotification(data.message, 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error al agregar producto: ' + error.message, 'error');
-        });
+        .catch(error => showNotification('Error al agregar: ' + error, 'error'));
     });
 
-    // Eliminar producto - VERSIÓN MEJORADA
+    // --- LÓGICA DE ELIMINAR ---
     function eliminarProducto(nombreProducto) {
-        if (!confirm(`¿Estás seguro de eliminar el producto "${nombreProducto}"?\n\nEsta acción no se puede deshacer.`)) {
-            return;
-        }
+        if (!confirm(`¿Estás seguro de eliminar "${nombreProducto}"?`)) return;
 
-        console.log(`🗑️ Eliminando producto: ${nombreProducto}`);
-
-        // Mostrar indicador de carga
-        showNotification('Eliminando producto...', 'info');
+        showNotification('Eliminando...', 'info');
 
         fetch('/eliminar-producto', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                producto_nombre: nombreProducto
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ producto_nombre: nombreProducto })
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('📥 Respuesta recibida:', data);
             if (data.success) {
-                showNotification(data.message, 'success');
-                // Recargar la página para ver los cambios
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                alert('Producto eliminado correctamente');
+                window.location.reload();
             } else {
                 showNotification(data.message, 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error al eliminar producto: ' + error.message, 'error');
-        });
+        .catch(error => showNotification('Error al eliminar: ' + error, 'error'));
+    }
+
+    // --- UTILIDAD: Notificaciones ---
+    // Si tienes una función showNotification en base.html, úsala. Si no, esta es una básica:
+    if (typeof showNotification === 'undefined') {
+        window.showNotification = function(msg, type) {
+            console.log('[' + type + '] ' + msg);
+            // Si es error, usamos alert para asegurar que se vea
+            if (type === 'error') alert(msg);
+        };
     }
 
     // Cerrar modales al hacer clic fuera
-    document.addEventListener('DOMContentLoaded', function() {
-        const modals = ['modal-editar', 'modal-agregar'];
-        modals.forEach(modalId => {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.addEventListener('click', function(e) {
-                    if (e.target === modal) {
-                        if (modalId === 'modal-editar') {
-                            cerrarModalEditar();
-                        } else {
-                            cerrarModalAgregar();
-                        }
-                    }
-                });
-            }
-        });
-    });
+    window.onclick = function(event) {
+        if (event.target.id == 'modal-editar') document.getElementById('modal-editar').style.display = "none";
+        if (event.target.id == 'modal-agregar') cerrarModalAgregar();
+    }
 </script>
 {% endblock %}
