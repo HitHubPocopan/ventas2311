@@ -41,9 +41,9 @@
                         {% if sistema.catalogo_cargado %}
                             {% set categorias_unicas = [] %}
                             {% for producto in sistema.catalogo %}
-                                {% if producto.Categoría and producto.Categoría not in categorias_unicas %}
-                                    {% set _ = categorias_unicas.append(producto.Categoría) %}
-                                    <option value="{{ producto.Categoría }}">{{ producto.Categoría }}</option>
+                                {% if producto.Categoria and producto.Categoria not in categorias_unicas %}
+                                    {% set _ = categorias_unicas.append(producto.Categoria) %}
+                                    <option value="{{ producto.Categoria }}">{{ producto.Categoria }}</option>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}
@@ -55,7 +55,7 @@
                     <div id="lista-productos">
                         {% for producto in sistema.catalogo %}
                         <div class="producto-item"
-                             data-categoria="{{ producto.Categoría }}"
+                             data-categoria="{{ producto.Categoria }}"
                              data-nombre="{{ producto.Nombre|lower }}"
                              onclick="seleccionarProducto('{{ producto.Nombre }}')">
 
@@ -65,9 +65,9 @@
                                         {{ producto.Nombre }}
                                     </h3>
                                     <div style="display: flex; gap: 0.8rem; font-size: 0.75rem; color: var(--texto-gris); margin-bottom: 0.3rem;">
-                                        <span><strong>Categoría:</strong> {{ producto.Categoría }}</span>
-                                        {% if producto.Subcategoría and producto.Subcategoría != '' %}
-                                        <span><strong>Sub:</strong> {{ producto.Subcategoría }}</span>
+                                        <span><strong>Categoría:</strong> {{ producto.Categoria }}</span>
+                                        {% if producto.SubCAT and producto.SubCAT != '' %}
+                                        <span><strong>Sub:</strong> {{ producto.SubCAT }}</span>
                                         {% endif %}
                                     </div>
                                 </div>

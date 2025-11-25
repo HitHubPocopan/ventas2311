@@ -112,8 +112,8 @@ class SistemaPocopan:
                     # Construir producto con manejo seguro de columnas opcionales
                     producto = {
                         'Nombre': nombre_limpio,
-                        'Categoría': str(row['Categoria']).strip() if 'Categoria' in df.columns and row['Categoria'] is not None else 'Sin Categoría',
-                        'Subcategoría': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and row['SubCAT'] is not None else '',
+                        'Categoria': str(row['Categoria']).strip() if 'Categoria' in df.columns and row['Categoria'] is not None else 'Sin Categoría',
+                        'SubCAT': str(row['SubCAT']).strip() if 'SubCAT' in df.columns and row['SubCAT'] is not None else '',
                         'Precio Venta': precio_float,
                         'Proveedor': str(row['Proveedor']).strip() if 'Proveedor' in df.columns and row['Proveedor'] is not None else 'Sin Proveedor',
                         'Estado': 'Disponible'
@@ -216,8 +216,8 @@ class SistemaPocopan:
                 try:
                     datos_para_excel.append({
                         'Nombre': str(producto.get('Nombre', '')).strip(),
-                        'Categoria': str(producto.get('Categoría', '')).strip() if producto.get('Categoría') else 'Sin Categoría',
-                        'SubCAT': str(producto.get('Subcategoría', '')).strip() if producto.get('Subcategoría') else '',
+                        'Categoria': str(producto.get('Categoria', '')).strip() if producto.get('Categoria') else 'Sin Categoría',
+                        'SubCAT': str(producto.get('SubCAT', '')).strip() if producto.get('SubCAT') else '',
                         'Precio Venta': float(producto.get('Precio Venta', 0)) if producto.get('Precio Venta') else 0.0,
                         'Proveedor': str(producto.get('Proveedor', '')).strip() if producto.get('Proveedor') else 'Sin Proveedor',
                         'Estado': str(producto.get('Estado', 'Disponible')).strip()
@@ -1013,10 +1013,10 @@ def actualizar_producto():
         
         producto_original = data.get('producto_original', '').strip()
         nuevo_nombre = data.get('nombre', '').strip()
-        nueva_categoria = data.get('categoria', '').strip()
+        nueva_categoria = data.get('categoria', '').strip() or 'Sin Categoría'
         nueva_subcategoria = data.get('subcategoria', '').strip()
         nuevo_precio = data.get('precio_venta', 0)
-        nuevo_proveedor = data.get('proveedor', '').strip()
+        nuevo_proveedor = data.get('proveedor', '').strip() or 'Sin Proveedor'
         
         if not producto_original or not nuevo_nombre:
             return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
@@ -1040,8 +1040,8 @@ def actualizar_producto():
             if nombre_catalogo == nombre_original_norm:
                 # Actualizar datos
                 producto['Nombre'] = nombre_nuevo_norm
-                producto['Categoría'] = nueva_categoria
-                producto['Subcategoría'] = nueva_subcategoria
+                producto['Categoria'] = nueva_categoria
+                producto['SubCAT'] = nueva_subcategoria
                 producto['Precio Venta'] = precio_float
                 producto['Proveedor'] = nuevo_proveedor
                 producto_encontrado = True
@@ -1114,8 +1114,8 @@ def agregar_producto():
         # Crear nuevo producto
         nuevo_producto = {
             'Nombre': nombre,
-            'Categoría': categoria or 'Sin Categoría',
-            'Subcategoría': subcategoria,
+            'Categoria': categoria or 'Sin Categoría',
+            'SubCAT': subcategoria,
             'Precio Venta': precio_float,
             'Proveedor': proveedor or 'Sin Proveedor',
             'Estado': 'Disponible'

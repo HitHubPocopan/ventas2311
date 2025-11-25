@@ -87,7 +87,7 @@
                 <div id="lista-productos">
                     {% for producto in catalogo %}
                     <div class="producto-item" 
-                         data-categoria="{{ producto.Categoría }}"
+                         data-categoria="{{ producto.Categoria }}"
                          data-nombre="{{ producto.Nombre|lower }}"
                          style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
                         
@@ -97,9 +97,9 @@
                                     {{ producto.Nombre }}
                                 </h3>
                                 <div style="display: flex; gap: 1rem; font-size: 0.9rem; color: var(--texto-gris); margin-bottom: 0.5rem;">
-                                    <span><strong>Categoría:</strong> {{ producto.Categoría }}</span>
-                                    {% if producto.Subcategoría and producto.Subcategoría != '' %}
-                                    <span><strong>Subcategoría:</strong> {{ producto.Subcategoría }}</span>
+                                    <span><strong>Categoría:</strong> {{ producto.Categoria }}</span>
+                                    {% if producto.SubCAT and producto.SubCAT != '' %}
+                                    <span><strong>Subcategoría:</strong> {{ producto.SubCAT }}</span>
                                     {% endif %}
                                     <span><strong>Proveedor:</strong> {{ producto.Proveedor }}</span>
                                 </div>
@@ -251,11 +251,11 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Categoría</label>
-                    <input type="text" id="edit-categoria" class="form-control" value="${producto.Categoría || ''}">
+                    <input type="text" id="edit-categoria" class="form-control" value="${producto.Categoria || ''}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Subcategoría</label>
-                    <input type="text" id="edit-subcategoria" class="form-control" value="${producto.Subcategoría || ''}">
+                    <input type="text" id="edit-subcategoria" class="form-control" value="${producto.SubCAT || ''}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Precio de Venta *</label>
