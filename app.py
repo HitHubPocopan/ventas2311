@@ -56,14 +56,17 @@ class SistemaPocopan:
         try:
             print("🔍 Intentando cargar catálogo desde Excel...")
             
+            # Usar ruta absoluta
+            archivo_catalogo = os.path.join(os.path.dirname(__file__), 'catalogo.xlsx')
+            
             # Verificar si el archivo existe
-            if not os.path.exists('catalogo.xlsx'):
+            if not os.path.exists(archivo_catalogo):
                 print("❌ Archivo catalogo.xlsx no encontrado")
                 self.crear_catalogo_emergencia()
                 return
             
             # Leer el archivo Excel
-            df = pd.read_excel('catalogo.xlsx')
+            df = pd.read_excel(archivo_catalogo)
             print(f"✅ Archivo Excel leído. Columnas encontradas: {df.columns.tolist()}")
             print(f"✅ Número de filas: {len(df)}")
             
@@ -163,11 +166,12 @@ class SistemaPocopan:
     def cargar_ventas_desde_excel(self):
         """Carga las ventas desde el archivo Excel a memoria"""
         try:
-            if not os.path.exists('ventas.xlsx'):
+            archivo_ventas = os.path.join(os.path.dirname(__file__), 'ventas.xlsx')
+            if not os.path.exists(archivo_ventas):
                 print("ℹ️ Archivo ventas.xlsx no encontrado, se creará vacío")
                 return
                 
-            df = pd.read_excel('ventas.xlsx')
+            df = pd.read_excel(archivo_ventas)
             df = df.replace({np.nan: None})
             ventas = df.to_dict('records')
             
@@ -186,11 +190,12 @@ class SistemaPocopan:
     def cargar_contadores_desde_json(self):
         """Carga los contadores desde el archivo JSON"""
         try:
-            if not os.path.exists('contadores.json'):
+            archivo_contadores = os.path.join(os.path.dirname(__file__), 'contadores.json')
+            if not os.path.exists(archivo_contadores):
                 print("ℹ️ Archivo contadores.json no encontrado, se usarán contadores por defecto")
                 return
                 
-            with open('contadores.json', 'r') as f:
+            with open(archivo_contadores, 'r') as f:
                 self.contadores_memory = json.load(f)
             print("✅ Contadores cargados")
         except Exception as e:
@@ -208,25 +213,41 @@ class SistemaPocopan:
             # Crear DataFrame desde el catálogo en memoria
             datos_para_excel = []
             for producto in self.catalogo:
-                datos_para_excel.append({
-                    'Nombre': producto['Nombre'],
-                    'Categoria': producto['Categoría'],
-                    'SubCAT': producto['Subcategoría'],
-                    'Precio Venta': producto['Precio Venta'],
-                    'Proveedor': producto['Proveedor'],
-                    'Estado': producto['Estado']
-                })
+                try:
+                    datos_para_excel.append({
+                        'Nombre': str(producto.get('Nombre', '')).strip(),
+                        'Categoria': str(producto.get('Categoría', '')).strip() if producto.get('Categoría') else 'Sin Categoría',
+                        'SubCAT': str(producto.get('Subcategoría', '')).strip() if producto.get('Subcategoría') else '',
+                        'Precio Venta': float(producto.get('Precio Venta', 0)) if producto.get('Precio Venta') else 0.0,
+                        'Proveedor': str(producto.get('Proveedor', '')).strip() if producto.get('Proveedor') else 'Sin Proveedor',
+                        'Estado': str(producto.get('Estado', 'Disponible')).strip()
+                    })
+                except Exception as e:
+                    print(f"⚠️ Error procesando producto: {str(e)}")
+                    continue
+            
+            if not datos_para_excel:
+                print("❌ No hay datos válidos para guardar")
+                return False
             
             df_catalogo = pd.DataFrame(datos_para_excel)
             
             # Reemplazar None por strings vacíos para evitar NaN
             df_catalogo = df_catalogo.fillna('')
             
+            # Usar ruta absoluta
+            archivo_excel = os.path.join(os.path.dirname(__file__), 'catalogo.xlsx')
+            print(f"📁 Guardando en: {archivo_excel}")
+            
             # Guardar en Excel
-            df_catalogo.to_excel('catalogo.xlsx', index=False, engine='openpyxl')
-            print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
+            df_catalogo.to_excel(archivo_excel, index=False, engine='openpyxl')
+            print(f"✅ Catálogo guardado en Excel correctamente: {len(self.catalogo)} productos")
             return True
             
+        except PermissionError as e:
+            print(f"❌ Error de permisos al guardar Excel: {str(e)}")
+            print(f"   Verifica que no tengas el archivo abierto en Excel")
+            return False
         except Exception as e:
             print(f"❌ Error guardando catálogo en Excel: {str(e)}")
             import traceback
@@ -247,8 +268,10 @@ class SistemaPocopan:
                 df_ventas = pd.DataFrame(todas_las_ventas)
                 df_ventas = df_ventas.fillna('')  # Limpiar NaN
 
+                # Usar ruta absoluta
+                archivo_ventas = os.path.join(os.path.dirname(__file__), 'ventas.xlsx')
                 # Guardar en Excel
-                df_ventas.to_excel('ventas.xlsx', index=False, engine='openpyxl')
+                df_ventas.to_excel(archivo_ventas, index=False, engine='openpyxl')
                 print(f"✅ Ventas guardadas en Excel: {len(todas_las_ventas)} registros")
             else:
                 print("ℹ️ No hay ventas para guardar")
@@ -260,7 +283,8 @@ class SistemaPocopan:
     def guardar_contadores_en_json(self):
         """Guarda los contadores en el archivo JSON"""
         try:
-            with open('contadores.json', 'w') as f:
+            archivo_contadores = os.path.join(os.path.dirname(__file__), 'contadores.json')
+            with open(archivo_contadores, 'w') as f:
                 json.dump(self.contadores_memory, f, indent=4)
             print("✅ Contadores guardados")
             return True
