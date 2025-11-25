@@ -212,7 +212,16 @@
         fetch('/obtener-producto/' + encodeURIComponent(nombreProducto), {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || data.error || 'Error en la respuesta');
+                    }).catch(e => {
+                        throw new Error('Error HTTP ' + response.status);
+                    });
+                }
+                return response.json();
+            })
             .then(producto => {
                 if (producto.error) {
                     showNotification('Error: ' + producto.error, 'error');
@@ -226,7 +235,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error al cargar producto', 'error');
+                showNotification('Error al cargar producto: ' + error.message, 'error');
             });
     }
 
@@ -289,16 +298,25 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Error en la respuesta');
+                }).catch(() => {
+                    throw new Error('Error HTTP ' + response.status);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert('Producto actualizado correctamente');
-                window.location.reload();
+                showNotification('Producto actualizado correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                showNotification(data.message, 'error');
+                showNotification(data.message || 'Error desconocido', 'error');
             }
         })
-        .catch(error => showNotification('Error al guardar: ' + error, 'error'));
+        .catch(error => showNotification('Error al guardar: ' + error.message, 'error'));
     }
 
     // --- LÓGICA DE AGREGAR ---
@@ -334,16 +352,25 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Error en la respuesta');
+                }).catch(() => {
+                    throw new Error('Error HTTP ' + response.status);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert('Producto agregado correctamente');
-                window.location.reload();
+                showNotification('Producto agregado correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                showNotification(data.message, 'error');
+                showNotification(data.message || 'Error desconocido', 'error');
             }
         })
-        .catch(error => showNotification('Error al agregar: ' + error, 'error'));
+        .catch(error => showNotification('Error al agregar: ' + error.message, 'error'));
     });
 
     // --- LÓGICA DE ELIMINAR ---
@@ -357,16 +384,25 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ producto_nombre: nombreProducto })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Error en la respuesta');
+                }).catch(() => {
+                    throw new Error('Error HTTP ' + response.status);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                alert('Producto eliminado correctamente');
-                window.location.reload();
+                showNotification('Producto eliminado correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                showNotification(data.message, 'error');
+                showNotification(data.message || 'Error desconocido', 'error');
             }
         })
-        .catch(error => showNotification('Error al eliminar: ' + error, 'error'));
+        .catch(error => showNotification('Error al eliminar: ' + error.message, 'error'));
     }
 
     // --- UTILIDAD: Notificaciones ---
@@ -374,8 +410,10 @@
     if (typeof showNotification === 'undefined') {
         window.showNotification = function(msg, type) {
             console.log('[' + type + '] ' + msg);
-            // Si es error, usamos alert para asegurar que se vea
-            if (type === 'error') alert(msg);
+            // Mostrar alert para errores y mensajes importantes
+            if (type === 'error' || type === 'success') {
+                alert('[' + type.toUpperCase() + '] ' + msg);
+            }
         };
     }
 

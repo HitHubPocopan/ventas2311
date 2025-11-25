@@ -92,8 +92,11 @@ class SistemaPocopan:
                         print(f"⚠️ Fila {index} saltada: nombre o precio vacío")
                         continue
                     
-                    # Convertir y limpiar datos
-                    nombre_limpio = str(nombre).strip()
+                    # --- MODIFICACIÓN: Normalización robusta de espacios ---
+                    nombre_str = str(nombre)
+                    # Esto arregla problemas de espacios dobles o espacios al final que rompen la búsqueda
+                    nombre_limpio = re.sub(r'\s+', ' ', nombre_str).strip()
+                    
                     if not nombre_limpio:
                         continue
                     
@@ -151,19 +154,11 @@ class SistemaPocopan:
                 'Precio Venta': 30800.0, 
                 'Proveedor': 'Proveedor B', 
                 'Estado': 'Disponible'
-            },
-            {
-                'Nombre': 'rompezabeza tubo 150 PIEZAS',
-                'Categoría': 'Ingenio',
-                'Subcategoría': 'RompeCabezas',
-                'Precio Venta': 15000.0,
-                'Proveedor': 'Proveedor C',
-                'Estado': 'Disponible'
             }
         ]
         self.catalogo_cargado = True
         self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
-        print("✅ Catálogo de emergencia creado con 3 productos")
+        print("✅ Catálogo de emergencia creado")
 
     def cargar_ventas_desde_excel(self):
         """Carga las ventas desde el archivo Excel a memoria"""
@@ -274,19 +269,21 @@ class SistemaPocopan:
             return False
 
     def obtener_detalles_producto(self, producto_nombre):
-        """Obtiene detalles de un producto - VERSIÓN REPARADA"""
+        """Obtiene detalles de un producto - VERSIÓN MEJORADA CON NORMALIZACIÓN"""
         if not self.catalogo_cargado or not producto_nombre:
             return None
         
         try:
+            # Normalizar nombre de entrada
             nombre_limpio = re.sub(r'\s+', ' ', producto_nombre).strip()
             print(f"🔍 Buscando producto en memoria: '{nombre_limpio}'")
-            print(f"📦 Total de productos en memoria: {len(self.catalogo)}")
             
-            # Primero: búsqueda exacta
+            # Primero: búsqueda exacta (Normalizada)
             for producto in self.catalogo:
-                if producto['Nombre'] == nombre_limpio:
-                    print(f"✅ Producto encontrado (exacto): {producto['Nombre']}")
+                # Normalizar nombre del catálogo al vuelo para comparar
+                nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+                if nombre_catalogo == nombre_limpio:
+                    print(f"✅ Producto encontrado (exacto normalizado): {producto['Nombre']}")
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
@@ -298,7 +295,8 @@ class SistemaPocopan:
             
             # Segundo: búsqueda case-insensitive
             for producto in self.catalogo:
-                if producto['Nombre'].lower() == nombre_limpio.lower():
+                nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+                if nombre_catalogo.lower() == nombre_limpio.lower():
                     print(f"✅ Producto encontrado (case-insensitive): {producto['Nombre']}")
                     return {
                         'nombre': producto['Nombre'],
@@ -333,20 +331,23 @@ class SistemaPocopan:
         if not self.catalogo_cargado or not query:
             return []
         
-        query = query.lower().strip()
+        # Normalizar query
+        query = re.sub(r'\s+', ' ', query).lower().strip()
         if len(query) < 2:
             return []
         
         try:
-            productos_filtrados = [
-                producto['Nombre'] for producto in self.catalogo 
-                if query in producto['Nombre'].lower()
-            ][:limit]
-            return productos_filtrados
+            productos_filtrados = []
+            for producto in self.catalogo:
+                # Normalizar nombre del producto para la búsqueda
+                nombre_prod = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+                if query in nombre_prod.lower():
+                    productos_filtrados.append(producto['Nombre'])
+            
+            return productos_filtrados[:limit]
         except Exception:
             return []
 
-    # ... (resto de los métodos se mantienen igual)
     def agregar_al_carrito(self, carrito_actual, producto_nombre, cantidad):
         try:
             # Validar límite del carrito
@@ -617,9 +618,6 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'usuario' not in session or session.get('rol') != 'admin':
-            # Si es una AJAX request, devolver JSON en lugar de redirect
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-                return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -814,6 +812,7 @@ def detalles_producto(producto_nombre):
         
     try:
         producto_decodificado = unquote(producto_nombre)
+        # --- MODIFICACIÓN: Normalización de entrada ---
         producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
         
         detalles = sistema.obtener_detalles_producto(producto_limpio)
@@ -944,19 +943,22 @@ def obtener_producto(producto_nombre):
         
     try:
         producto_decodificado = unquote(producto_nombre)
+        # --- MODIFICACIÓN: Normalización de búsqueda ---
         producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
         
         print(f"🔍 Buscando producto: '{producto_limpio}'")
         
-        # Buscar producto en el catálogo
+        # Buscar producto en el catálogo con normalización
         for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_limpio:
+            nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+            if nombre_catalogo == producto_limpio:
                 print(f"✅ Producto encontrado: {producto['Nombre']}")
                 return jsonify(producto)
         
         # Búsqueda case-insensitive si no se encuentra exacto
         for producto in sistema.catalogo:
-            if producto['Nombre'].lower() == producto_limpio.lower():
+            nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+            if nombre_catalogo.lower() == producto_limpio.lower():
                 print(f"✅ Producto encontrado (case-insensitive): {producto['Nombre']}")
                 return jsonify(producto)
         
@@ -1003,12 +1005,17 @@ def actualizar_producto():
         except (ValueError, TypeError):
             return jsonify({'success': False, 'message': 'Precio inválido'}), 400
         
+        # --- MODIFICACIÓN: Normalización de búsqueda ---
+        nombre_original_norm = re.sub(r'\s+', ' ', producto_original).strip()
+        nombre_nuevo_norm = re.sub(r'\s+', ' ', nuevo_nombre).strip()
+        
         # Buscar y actualizar el producto
         producto_encontrado = False
         for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_original:
+            nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+            if nombre_catalogo == nombre_original_norm:
                 # Actualizar datos
-                producto['Nombre'] = nuevo_nombre
+                producto['Nombre'] = nombre_nuevo_norm
                 producto['Categoría'] = nueva_categoria
                 producto['Subcategoría'] = nueva_subcategoria
                 producto['Precio Venta'] = precio_float
@@ -1056,7 +1063,8 @@ def agregar_producto():
         
         print(f"📝 Datos recibidos para agregar: {data}")
         
-        nombre = data.get('nombre', '').strip()
+        # --- MODIFICACIÓN: Normalización de entrada ---
+        nombre = re.sub(r'\s+', ' ', data.get('nombre', '')).strip()
         categoria = data.get('categoria', '').strip()
         subcategoria = data.get('subcategoria', '').strip()
         precio_venta = data.get('precio_venta', 0)
@@ -1073,9 +1081,10 @@ def agregar_producto():
         except (ValueError, TypeError):
             return jsonify({'success': False, 'message': 'Precio inválido'}), 400
         
-        # Verificar si el producto ya existe
+        # Verificar si el producto ya existe (Normalizado)
         for producto in sistema.catalogo:
-            if producto['Nombre'].lower() == nombre.lower():
+            nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+            if nombre_catalogo.lower() == nombre.lower():
                 return jsonify({'success': False, 'message': f'El producto "{nombre}" ya existe'}), 400
         
         # Crear nuevo producto
@@ -1124,17 +1133,19 @@ def eliminar_producto():
         if not data:
             return jsonify({'success': False, 'message': 'No se recibieron datos JSON'}), 400
         
-        producto_nombre = data.get('producto_nombre', '').strip()
+        # --- MODIFICACIÓN: Normalización de entrada ---
+        producto_nombre = re.sub(r'\s+', ' ', data.get('producto_nombre', '')).strip()
         
         if not producto_nombre:
             return jsonify({'success': False, 'message': 'Nombre del producto requerido'}), 400
         
         print(f"🗑️ Intentando eliminar producto: {producto_nombre}")
         
-        # Buscar y eliminar el producto
+        # Buscar y eliminar el producto (con normalización)
         producto_encontrado = False
         for i, producto in enumerate(sistema.catalogo):
-            if producto['Nombre'] == producto_nombre:
+            nombre_catalogo = re.sub(r'\s+', ' ', producto['Nombre']).strip()
+            if nombre_catalogo == producto_nombre:
                 sistema.catalogo.pop(i)
                 producto_encontrado = True
                 print(f"✅ Producto eliminado de memoria: {producto_nombre}")
