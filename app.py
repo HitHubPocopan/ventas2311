@@ -144,16 +144,16 @@ class SistemaPocopan:
         self.catalogo = [
             {
                 'Nombre': 'Cajas Verdes GRANJA ANIMALES DINOS',
-                'Categoría': 'Ingenio', 
-                'Subcategoría': 'Madera Ingenio',
+                'Categoria': 'Ingenio', 
+                'SubCAT': 'Madera Ingenio',
                 'Precio Venta': 25000.0, 
                 'Proveedor': 'Proveedor A', 
                 'Estado': 'Disponible'
             },
             {
                 'Nombre': 'Pezca Gusanos', 
-                'Categoría': 'Ingenio', 
-                'Subcategoría': 'Madera Ingenio',
+                'Categoria': 'Ingenio', 
+                'SubCAT': 'Madera Ingenio',
                 'Precio Venta': 30800.0, 
                 'Proveedor': 'Proveedor B', 
                 'Estado': 'Disponible'
@@ -311,8 +311,8 @@ class SistemaPocopan:
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
-                        'categoria': producto['Categoría'],
-                        'subcategoria': producto['Subcategoría'],
+                        'categoria': producto['Categoria'],
+                        'subcategoria': producto['SubCAT'],
                         'proveedor': producto['Proveedor'],
                         'estado': producto['Estado']
                     }
@@ -325,8 +325,8 @@ class SistemaPocopan:
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
-                        'categoria': producto['Categoría'],
-                        'subcategoria': producto['Subcategoría'],
+                        'categoria': producto['Categoria'],
+                        'subcategoria': producto['SubCAT'],
                         'proveedor': producto['Proveedor'],
                         'estado': producto['Estado']
                     }
@@ -338,8 +338,8 @@ class SistemaPocopan:
                     return {
                         'nombre': producto['Nombre'],
                         'precio': producto['Precio Venta'],
-                        'categoria': producto['Categoría'],
-                        'subcategoria': producto['Subcategoría'],
+                        'categoria': producto['Categoria'],
+                        'subcategoria': producto['SubCAT'],
                         'proveedor': producto['Proveedor'],
                         'estado': producto['Estado']
                     }
@@ -642,6 +642,9 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'usuario' not in session or session.get('rol') != 'admin':
+            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
+            if is_ajax:
+                return jsonify({'error': 'No autorizado', 'message': 'Acceso denegado'}), 403
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function

@@ -36,8 +36,8 @@
                 <h3 style="color: #17a2b8; font-size: 2rem; margin: 0;">
                     {% set categorias = [] %}
                     {% for producto in catalogo %}
-                        {% if producto.Categoría not in categorias %}
-                            {% set _ = categorias.append(producto.Categoría) %}
+                        {% if producto.Categoria not in categorias %}
+                            {% set _ = categorias.append(producto.Categoria) %}
                         {% endif %}
                     {% endfor %}
                     {{ categorias|length }}
@@ -61,9 +61,9 @@
                         <option value="all">Todas las categorías</option>
                         {% set categorias_unicas = [] %}
                         {% for producto in catalogo %}
-                            {% if producto.Categoría and producto.Categoría not in categorias_unicas %}
-                                {% set _ = categorias_unicas.append(producto.Categoría) %}
-                                <option value="{{ producto.Categoría }}">{{ producto.Categoría }}</option>
+                            {% if producto.Categoria and producto.Categoria not in categorias_unicas %}
+                                {% set _ = categorias_unicas.append(producto.Categoria) %}
+                                <option value="{{ producto.Categoria }}">{{ producto.Categoria }}</option>
                             {% endif %}
                         {% endfor %}
                     </select>
