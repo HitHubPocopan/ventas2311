@@ -53,10 +53,10 @@ class SistemaPocopan:
         try:
             # Leer el archivo Excel
             df = pd.read_excel('catalogo.xlsx')
-            
+
             # Limpiar y procesar los datos
             self.catalogo = []
-            
+
             for _, row in df.iterrows():
                 # Verificar que tenga los datos mínimos necesarios
                 if pd.notna(row['Nombre']) and pd.notna(row['Precio Venta']):
@@ -69,16 +69,61 @@ class SistemaPocopan:
                         'Estado': 'Disponible'
                     }
                     self.catalogo.append(producto)
-            
+
             self.catalogo_cargado = True
             self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
-            
+
             print(f"✅ Catálogo cargado: {len(self.catalogo)} productos")
-            
+
         except Exception as e:
             print(f"❌ Error cargando catálogo: {str(e)}")
             # Si hay error, crear un catálogo mínimo de emergencia
             self.crear_catalogo_emergencia()
+
+    def guardar_catalogo_en_excel(self):
+        """Guarda el catálogo actual en el archivo Excel"""
+        try:
+            # Crear DataFrame desde el catálogo en memoria
+            df_catalogo = pd.DataFrame(self.catalogo)
+
+            # Renombrar columnas para coincidir con el formato original
+            column_mapping = {
+                'Nombre': 'Nombre',
+                'Categoría': 'Categoria',
+                'Subcategoría': 'SubCAT',
+                'Precio Venta': 'Precio Venta',
+                'Proveedor': 'Proveedor',
+                'Estado': 'Estado'
+            }
+            df_catalogo = df_catalogo.rename(columns=column_mapping)
+
+            # Guardar en Excel
+            df_catalogo.to_excel('catalogo.xlsx', index=False)
+            print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
+
+        except Exception as e:
+            print(f"❌ Error guardando catálogo en Excel: {str(e)}")
+
+    def guardar_ventas_en_excel(self):
+        """Guarda todas las ventas en el archivo Excel"""
+        try:
+            # Consolidar todas las ventas
+            todas_las_ventas = []
+            for terminal, ventas in self.ventas_memory.items():
+                todas_las_ventas.extend(ventas)
+
+            if todas_las_ventas:
+                # Crear DataFrame
+                df_ventas = pd.DataFrame(todas_las_ventas)
+
+                # Guardar en Excel
+                df_ventas.to_excel('ventas.xlsx', index=False)
+                print(f"✅ Ventas guardadas en Excel: {len(todas_las_ventas)} registros")
+            else:
+                print("ℹ️ No hay ventas para guardar")
+
+        except Exception as e:
+            print(f"❌ Error guardando ventas en Excel: {str(e)}")
 
     def crear_catalogo_emergencia(self):
         """Crea un catálogo mínimo en caso de error"""

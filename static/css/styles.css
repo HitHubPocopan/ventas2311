@@ -1,16 +1,24 @@
-/* Paleta de Colores POCOPAN */
+/* Paleta de Colores POCOPAN Mejorada */
 :root {
     --naranja-primario: #FF6B35;
     --naranja-claro: #FF8C65;
     --naranja-oscuro: #E55A2B;
     --naranja-fondo: #FFF9F5;
     --naranja-borde: #FFD7C9;
-    --texto-oscuro: #333333;
-    --texto-gris: #666666;
+    --naranja-hover: #FFE8E0;
+    --texto-oscuro: #2C3E50;
+    --texto-gris: #7F8C8D;
+    --texto-claro: #BDC3C7;
     --blanco: #FFFFFF;
-    --sombra: rgba(255, 107, 53, 0.15);
+    --gris-claro: #F8F9FA;
+    --gris-medio: #E9ECEF;
+    --gris-oscuro: #495057;
+    --sombra: rgba(255, 107, 53, 0.1);
+    --sombra-fuerte: rgba(0, 0, 0, 0.1);
     --verde-success: #28a745;
     --verde-hover: #218838;
+    --azul-info: #17a2b8;
+    --rojo-danger: #dc3545;
 }
 
 /* Estilos Globales */
@@ -22,10 +30,12 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: var(--naranja-fondo);
+    background: linear-gradient(135deg, var(--gris-claro) 0%, var(--naranja-fondo) 100%);
     color: var(--texto-oscuro);
-    line-height: 1.4;
+    line-height: 1.6;
     font-size: 14px;
+    min-height: 100vh;
+    overflow-y: auto;
 }
 
 /* Header y Navegación */
@@ -87,72 +97,127 @@ nav .btn {
 
 /* Contenedor Principal */
 .container {
-    max-width: 1200px;
-    margin: 1rem auto;
+    max-width: 1400px;
+    margin: 1.5rem auto;
     padding: 0 1.5rem;
 }
 
-/* Tarjetas */
+/* Layout principal con altura fija */
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 1.5rem;
+    height: calc(100vh - 200px);
+    min-height: 600px;
+}
+
+/* Tarjetas Mejoradas */
 .card {
     background: var(--blanco);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px var(--sombra);
-    border: 1px solid var(--naranja-borde);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px var(--sombra-fuerte);
+    border: 1px solid var(--gris-medio);
     overflow: hidden;
     margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 30px var(--sombra-fuerte);
+    transform: translateY(-2px);
 }
 
 .card-header {
-    background: var(--naranja-primario);
+    background: linear-gradient(135deg, var(--naranja-primario) 0%, var(--naranja-oscuro) 100%);
     color: var(--blanco);
-    padding: 0.8rem 1rem;
+    padding: 1rem 1.2rem;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .card-body {
-    padding: 1rem;
+    padding: 1.2rem;
+    height: calc(100% - 60px);
+    display: flex;
+    flex-direction: column;
 }
 
-/* Botones */
+/* Contenedores con scroll interno */
+.scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+    margin-right: -8px;
+}
+
+.scroll-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+    background: var(--gris-medio);
+    border-radius: 4px;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+    background: var(--naranja-primario);
+    border-radius: 4px;
+}
+
+.scroll-area::-webkit-scrollbar-thumb:hover {
+    background: var(--naranja-oscuro);
+}
+
+/* Botones Mejorados */
 .btn {
-    padding: 8px 16px;
+    padding: 10px 20px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     text-decoration: none;
     display: inline-block;
     text-align: center;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px var(--sombra);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--sombra);
+}
+
+.btn:active {
+    transform: translateY(0);
 }
 
 .btn-primary {
-    background: var(--naranja-primario);
+    background: linear-gradient(135deg, var(--naranja-primario) 0%, var(--naranja-oscuro) 100%);
     color: var(--blanco);
 }
 
 .btn-primary:hover {
-    background: var(--naranja-oscuro);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px var(--sombra);
+    background: linear-gradient(135deg, var(--naranja-oscuro) 0%, var(--naranja-primario) 100%);
 }
 
 .btn-success {
-    background: var(--verde-success);
+    background: linear-gradient(135deg, var(--verde-success) 0%, var(--verde-hover) 100%);
     color: var(--blanco);
 }
 
 .btn-success:hover {
-    background: var(--verde-hover);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, var(--verde-hover) 0%, var(--verde-success) 100%);
 }
 
 .btn-outline {
     background: transparent;
     color: var(--naranja-primario);
-    border: 1px solid var(--naranja-primario);
+    border: 2px solid var(--naranja-primario);
 }
 
 .btn-outline:hover {
@@ -161,12 +226,22 @@ nav .btn {
 }
 
 .btn-danger {
-    background: #DC3545;
+    background: linear-gradient(135deg, var(--rojo-danger) 0%, #c82333 100%);
     color: var(--blanco);
 }
 
 .btn-danger:hover {
-    background: #C82333;
+    background: linear-gradient(135deg, #c82333 0%, var(--rojo-danger) 100%);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-lg {
+    padding: 12px 24px;
+    font-size: 1rem;
 }
 
 /* Formularios */
@@ -264,31 +339,47 @@ nav .btn {
     display: none;
 }
 
-/* Productos en POS */
+/* Productos en POS Mejorados */
 .producto-item {
-    border: 1px solid var(--naranja-borde);
-    border-radius: 6px;
-    padding: 0.8rem;
-    margin-bottom: 0.6rem;
+    border: 1px solid var(--gris-medio);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: white;
-    font-size: 0.85rem;
+    background: var(--blanco);
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px var(--sombra);
 }
 
 .producto-item:hover {
     border-color: var(--naranja-primario);
-    background: var(--naranja-fondo);
+    background: var(--naranja-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--sombra);
 }
 
-/* Carrito */
+.producto-item.selected {
+    border-color: var(--verde-success);
+    background: rgba(40, 167, 69, 0.1);
+}
+
+/* Carrito Mejorado */
 .carrito-item {
-    border: 1px solid var(--naranja-borde);
-    border-radius: 6px;
-    padding: 0.6rem;
+    border: 1px solid var(--gris-medio);
+    border-radius: 8px;
+    padding: 0.8rem;
     margin-bottom: 0.6rem;
-    background: var(--naranja-fondo);
-    font-size: 0.8rem;
+    background: var(--gris-claro);
+    font-size: 0.85rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.carrito-item:hover {
+    background: var(--blanco);
+    border-color: var(--naranja-primario);
+    box-shadow: 0 2px 8px var(--sombra);
 }
 
 /* Dashboard mejorado */
@@ -301,7 +392,7 @@ nav .btn {
     margin-bottom: 0.3rem;
 }
 
-/* Scroll containers */
+/* Scroll containers legacy - mantener compatibilidad */
 .scroll-container {
     max-height: 400px;
     overflow-y: auto;
@@ -313,7 +404,7 @@ nav .btn {
 }
 
 .scroll-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--gris-medio);
     border-radius: 3px;
 }
 
@@ -326,35 +417,77 @@ nav .btn {
     background: var(--naranja-oscuro);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive Mejorado */
+@media (max-width: 1024px) {
+    .main-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        gap: 1rem;
+    }
+
     .container {
+        max-width: 100%;
         padding: 0 1rem;
     }
-    
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 0.8rem;
+    }
+
     .navbar {
         flex-direction: column;
         gap: 0.8rem;
+        text-align: center;
     }
-    
+
     .user-info {
         flex-direction: column;
         gap: 0.5rem;
+        width: 100%;
     }
-    
+
+    .user-badge, .user-terminal {
+        width: 100%;
+        text-align: center;
+    }
+
+    .main-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        gap: 1rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
     .grid-2,
     .grid-3,
     .grid-4 {
         grid-template-columns: 1fr;
     }
-    
-    .card-body {
+
+    .producto-item {
         padding: 0.8rem;
-    }
-    
-    .btn {
-        padding: 6px 12px;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
     }
 }
 

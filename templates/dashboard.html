@@ -158,9 +158,9 @@
     </div>
 
     <!-- Sección Inferior - 2 Columnas -->
-    <div class="grid grid-2 gap-2">
+    <div class="main-layout">
         <!-- Columna Izquierda: Transacciones -->
-        <div class="card">
+        <div class="card" style="height: 100%;">
             <div class="card-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>📋 Transacciones</span>
@@ -176,29 +176,34 @@
                         <div style="font-size: 0.8rem; color: var(--texto-gris);">Transacciones de Hoy</div>
                     </div>
                 </div>
-                
-                <div id="lista-transacciones-hoy" class="scroll-container" style="max-height: 300px;">
-                    <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
-                        <p>No hay transacciones hoy</p>
-                        <p style="font-size: 0.8rem;">Las ventas de hoy aparecerán aquí</p>
+
+                <!-- Lista de Transacciones con Scroll Interno -->
+                <div class="scroll-area">
+                    <div id="lista-transacciones-hoy">
+                        <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                            <p>No hay transacciones hoy</p>
+                            <p style="font-size: 0.8rem;">Las ventas de hoy aparecerán aquí</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Columna Derecha: Productos Más Vendidos -->
-        <div class="card">
+        <div class="card" style="height: 100%;">
             <div class="card-header">
                 🏆 Productos Más Vendidos
             </div>
             <div class="card-body">
-                <div id="lista-productos-vendidos">
-                    <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
-                        <p>No hay productos vendidos hoy</p>
-                        <p style="font-size: 0.8rem;">Los productos más vendidos aparecerán aquí</p>
-                    </div>
+                <!-- Lista de Productos con Scroll Interno -->
+                <div class="scroll-area">
+                    <div id="lista-productos-vendidos">
+                        <div style="text-align: center; padding: 1.5rem; color: var(--texto-gris);">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+                            <p>No hay productos vendidos hoy</p>
+                            <p style="font-size: 0.8rem;">Los productos más vendidos aparecerán aquí</p>
+                        </div>
                 </div>
             </div>
         </div>
