@@ -617,6 +617,9 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'usuario' not in session or session.get('rol') != 'admin':
+            # Si es una AJAX request, devolver JSON en lugar de redirect
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function

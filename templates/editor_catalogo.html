@@ -209,11 +209,17 @@
         showNotification('Cargando producto...', 'info');
         
         // encodeURIComponent es crucial para nombres con espacios o símbolos
-        fetch('/obtener-producto/' + encodeURIComponent(nombreProducto))
+        fetch('/obtener-producto/' + encodeURIComponent(nombreProducto), {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
             .then(response => response.json())
             .then(producto => {
                 if (producto.error) {
                     showNotification('Error: ' + producto.error, 'error');
+                    return;
+                }
+                if (producto.success === false) {
+                    showNotification('Error: ' + (producto.message || 'Error desconocido'), 'error');
                     return;
                 }
                 mostrarModalEditar(producto);
