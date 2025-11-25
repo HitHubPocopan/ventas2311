@@ -37,7 +37,7 @@
     <nav style="background: white; border-bottom: 1px solid var(--naranja-borde); padding: 1rem 0;">
         <div class="container">
             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <a href="{{ url_for('index') }}" class="btn btn-outline">Punto de Venta</a>
+                <a href="{{ url_for('punto_venta') }}" class="btn btn-outline">Punto de Venta</a>
                 <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Dashboard</a>
                 {% if session.rol == 'admin' %}
                 <a href="{{ url_for('dashboard_terminal', terminal_id='TODAS') }}" class="btn btn-outline">Todas las Terminales</a>

@@ -30,35 +30,21 @@ class SistemaPocopan:
             }
         }
         
-        # Inicializar estructuras en memoria
-        self.ventas_memory = {'POS1': [], 'POS2': [], 'POS3': [], 'TODAS': []}
-        self.contadores_memory = {
-            "POS1": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
-            "POS2": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
-            "POS3": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
-            "TODAS": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0}
-        }
-        
-        # Cargar catálogo desde Excel
+        # Solo cargar catálogo desde Excel
         self.catalogo = []
         self.catalogo_cargado = False
         self.productos_disponibles = []
         
         self.cargar_catalogo_desde_excel()
-        
-        print("✅ Sistema POCOPAN inicializado correctamente")
+        print("✅ Sistema POCOPAN inicializado - Solo Excel")
 
     def cargar_catalogo_desde_excel(self):
         """Carga el catálogo desde el archivo Excel"""
         try:
-            # Leer el archivo Excel
             df = pd.read_excel('catalogo.xlsx')
-
-            # Limpiar y procesar los datos
             self.catalogo = []
 
             for _, row in df.iterrows():
-                # Verificar que tenga los datos mínimos necesarios
                 if pd.notna(row['Nombre']) and pd.notna(row['Precio Venta']):
                     producto = {
                         'Nombre': str(row['Nombre']).strip(),
@@ -72,58 +58,11 @@ class SistemaPocopan:
 
             self.catalogo_cargado = True
             self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
-
             print(f"✅ Catálogo cargado: {len(self.catalogo)} productos")
 
         except Exception as e:
             print(f"❌ Error cargando catálogo: {str(e)}")
-            # Si hay error, crear un catálogo mínimo de emergencia
             self.crear_catalogo_emergencia()
-
-    def guardar_catalogo_en_excel(self):
-        """Guarda el catálogo actual en el archivo Excel"""
-        try:
-            # Crear DataFrame desde el catálogo en memoria
-            df_catalogo = pd.DataFrame(self.catalogo)
-
-            # Renombrar columnas para coincidir con el formato original
-            column_mapping = {
-                'Nombre': 'Nombre',
-                'Categoría': 'Categoria',
-                'Subcategoría': 'SubCAT',
-                'Precio Venta': 'Precio Venta',
-                'Proveedor': 'Proveedor',
-                'Estado': 'Estado'
-            }
-            df_catalogo = df_catalogo.rename(columns=column_mapping)
-
-            # Guardar en Excel
-            df_catalogo.to_excel('catalogo.xlsx', index=False)
-            print(f"✅ Catálogo guardado en Excel: {len(self.catalogo)} productos")
-
-        except Exception as e:
-            print(f"❌ Error guardando catálogo en Excel: {str(e)}")
-
-    def guardar_ventas_en_excel(self):
-        """Guarda todas las ventas en el archivo Excel"""
-        try:
-            # Consolidar todas las ventas
-            todas_las_ventas = []
-            for terminal, ventas in self.ventas_memory.items():
-                todas_las_ventas.extend(ventas)
-
-            if todas_las_ventas:
-                # Crear DataFrame
-                df_ventas = pd.DataFrame(todas_las_ventas)
-
-                # Guardar en Excel
-                df_ventas.to_excel('ventas.xlsx', index=False)
-                print(f"✅ Ventas guardadas en Excel: {len(todas_las_ventas)} registros")
-            else:
-                print("ℹ️ No hay ventas para guardar")
-
-        except Exception as e:
-            print(f"❌ Error guardando ventas en Excel: {str(e)}")
 
     def crear_catalogo_emergencia(self):
         """Crea un catálogo mínimo en caso de error"""
@@ -148,6 +87,66 @@ class SistemaPocopan:
         self.catalogo_cargado = True
         self.productos_disponibles = [p['Nombre'] for p in self.catalogo]
         print("⚠️ Catálogo de emergencia cargado")
+
+    def obtener_ventas_desde_excel(self, terminal_id=None):
+        """Lee todas las ventas desde el archivo Excel"""
+        try:
+            df = pd.read_excel('ventas.xlsx')
+            ventas = df.to_dict('records')
+            
+            if terminal_id and terminal_id != "TODAS":
+                ventas = [v for v in ventas if v.get('ID_Terminal') == terminal_id]
+                
+            return ventas
+        except Exception as e:
+            print(f"❌ Error leyendo ventas: {str(e)}")
+            return []
+
+    def obtener_contadores_desde_json(self):
+        """Lee los contadores desde el archivo JSON"""
+        try:
+            with open('contadores.json', 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"❌ Error leyendo contadores: {str(e)}")
+            return {
+                "POS1": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
+                "POS2": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0},
+                "POS3": {"ultimo_cliente": 0, "ultima_venta": 0, "total_ventas": 0}
+            }
+
+    def guardar_contadores_en_json(self, contadores):
+        """Guarda los contadores en el archivo JSON"""
+        try:
+            with open('contadores.json', 'w') as f:
+                json.dump(contadores, f, indent=4)
+            return True
+        except Exception as e:
+            print(f"❌ Error guardando contadores: {str(e)}")
+            return False
+
+    def guardar_venta_en_excel(self, nueva_venta):
+        """Guarda una nueva venta en el Excel"""
+        try:
+            # Leer ventas existentes
+            try:
+                df_existente = pd.read_excel('ventas.xlsx')
+            except:
+                df_existente = pd.DataFrame(columns=[
+                    'ID_Venta', 'Fecha', 'Hora', 'ID_Cliente', 'Producto',
+                    'Cantidad', 'Precio_Unitario', 'Total_Venta', 'Vendedor', 'ID_Terminal'
+                ])
+            
+            # Agregar nueva venta
+            df_nueva = pd.DataFrame([nueva_venta])
+            df_final = pd.concat([df_existente, df_nueva], ignore_index=True)
+            
+            # Guardar
+            df_final.to_excel('ventas.xlsx', index=False)
+            return True
+        except Exception as e:
+            print(f"❌ Error guardando venta: {str(e)}")
+            return False
 
     def obtener_detalles_producto(self, producto_nombre):
         if not self.catalogo_cargado or not producto_nombre:
@@ -291,19 +290,17 @@ class SistemaPocopan:
             return False, "El carrito está vacío"
         
         try:
-            # Usar contadores específicos del terminal
-            id_cliente = self.contadores_memory[terminal_id]["ultimo_cliente"] + 1
+            # Leer contadores actuales
+            contadores = self.obtener_contadores_desde_json()
+            
+            # Actualizar contadores
+            id_cliente = contadores[terminal_id]["ultimo_cliente"] + 1
+            id_venta = contadores[terminal_id]["ultima_venta"] + 1
+            
             fecha = date.today().strftime("%Y-%m-%d")
             hora = datetime.now().strftime("%H:%M:%S")
             
-            # Obtener último ID_Venta del terminal específico
-            ventas_terminal = self.ventas_memory.get(terminal_id, [])
-            if not ventas_terminal:
-                id_venta = 1
-            else:
-                id_venta = max([venta['ID_Venta'] for venta in ventas_terminal]) + 1
-            
-            nuevas_ventas = []
+            # Guardar cada item del carrito
             for item in carrito_actual:
                 nueva_venta = {
                     'ID_Venta': id_venta,
@@ -317,23 +314,26 @@ class SistemaPocopan:
                     'Vendedor': f'POS {terminal_id}',
                     'ID_Terminal': terminal_id
                 }
-                nuevas_ventas.append(nueva_venta)
-            
-            # Guardar en memoria
-            self.ventas_memory[terminal_id].extend(nuevas_ventas)
-            self.ventas_memory['TODAS'].extend(nuevas_ventas)
+                
+                # Guardar en Excel
+                if not self.guardar_venta_en_excel(nueva_venta):
+                    return False, "Error al guardar la venta"
             
             # Actualizar contadores
-            self.contadores_memory[terminal_id]["ultimo_cliente"] = id_cliente
-            self.contadores_memory[terminal_id]["ultima_venta"] = id_venta
-            self.contadores_memory[terminal_id]["total_ventas"] += 1
+            contadores[terminal_id]["ultimo_cliente"] = id_cliente
+            contadores[terminal_id]["ultima_venta"] = id_venta
+            contadores[terminal_id]["total_ventas"] += len(carrito_actual)
+            
+            # Guardar contadores actualizados
+            if not self.guardar_contadores_en_json(contadores):
+                return False, "Error al actualizar contadores"
             
             totales = self.calcular_totales(carrito_actual)
             
             return True, {
                 'id_venta': id_venta,
                 'id_cliente': f"CLIENTE-{terminal_id}-{id_cliente:04d}",
-                'total_productos': len(nuevas_ventas),
+                'total_productos': len(carrito_actual),
                 'totales': totales,
                 'fecha': fecha,
                 'hora': hora
@@ -344,20 +344,10 @@ class SistemaPocopan:
 
     def obtener_estadisticas_dashboard(self, terminal_id=None):
         try:
-            if terminal_id == "TODAS" or terminal_id is None:
-                # Estadísticas consolidadas
-                ventas_consolidadas = []
-                for sheet in ['POS1', 'POS2', 'POS3']:
-                    ventas_consolidadas.extend(self.ventas_memory.get(sheet, []))
-                ventas = ventas_consolidadas
-                terminal_nombre = "General (Todas las Terminales)"
-            else:
-                # Estadísticas de terminal específico
-                ventas = self.ventas_memory.get(terminal_id, [])
-                terminal_nombre = f"Terminal {terminal_id}"
-                
+            ventas = self.obtener_ventas_desde_excel(terminal_id)
+            
             if not ventas:
-                return self._estadisticas_vacias(terminal_nombre)
+                return self._estadisticas_vacias(terminal_id or "TODAS")
             
             # Calcular métricas
             ids_venta_unicos = set(venta['ID_Venta'] for venta in ventas)
@@ -370,6 +360,11 @@ class SistemaPocopan:
             
             productos_disponibles = len(self.catalogo)
             
+            if terminal_id == "TODAS" or terminal_id is None:
+                terminal_nombre = "General (Todas las Terminales)"
+            else:
+                terminal_nombre = f"Terminal {terminal_id}"
+            
             return {
                 'ventas_totales': total_ventas,
                 'ingresos_totales': f"{self.config['moneda']}{ingresos_totales:,.2f}",
@@ -379,7 +374,8 @@ class SistemaPocopan:
                 'dashboard_nombre': f"Dashboard - {terminal_nombre}",
                 'terminal_actual': terminal_id or "TODAS"
             }
-        except Exception:
+        except Exception as e:
+            print(f"Error en estadísticas: {str(e)}")
             return self._estadisticas_vacias(terminal_id or "TODAS")
 
     def _estadisticas_vacias(self, terminal_nombre):
@@ -393,19 +389,72 @@ class SistemaPocopan:
             'terminal_actual': "TODAS"
         }
 
-    def obtener_estadisticas_por_terminal(self):
-        stats = {}
-        for terminal in ['POS1', 'POS2', 'POS3']:
-            stats[terminal] = self.obtener_estadisticas_dashboard(terminal)
-        return stats
+    def obtener_estadisticas_avanzadas(self, terminal_id="TODAS"):
+        """Obtiene estadísticas detalladas para el dashboard"""
+        try:
+            ventas = self.obtener_ventas_desde_excel(terminal_id)
+            
+            if not ventas:
+                return self._estadisticas_avanzadas_vacias()
+            
+            fecha_hoy = date.today().strftime("%Y-%m-%d")
+            ventas_hoy = [v for v in ventas if v['Fecha'] == fecha_hoy]
+            
+            # Calcular ingresos
+            ingresos_hoy = sum(v['Total_Venta'] for v in ventas_hoy)
+            monto_historico = sum(v['Total_Venta'] for v in ventas)
+            
+            # Productos vendidos hoy
+            productos_vendidos_hoy = sum(v['Cantidad'] for v in ventas_hoy)
+            
+            # Productos más vendidos
+            productos_ventas = {}
+            for venta in ventas_hoy:
+                producto = venta['Producto']
+                if producto in productos_ventas:
+                    productos_ventas[producto] += venta['Cantidad']
+                else:
+                    productos_ventas[producto] = venta['Cantidad']
+            
+            productos_mas_vendidos = sorted(
+                [{'producto': k, 'cantidad': v} for k, v in productos_ventas.items()],
+                key=lambda x: x['cantidad'],
+                reverse=True
+            )[:5]
+            
+            # Promedio diario
+            dias_con_ventas = max(1, len(set(v['Fecha'] for v in ventas)))
+            promedio_diario = monto_historico / dias_con_ventas
+            
+            return {
+                'ingresos_hoy': ingresos_hoy,
+                'productos_vendidos_hoy': productos_vendidos_hoy,
+                'monto_historico': monto_historico,
+                'promedio_diario': promedio_diario,
+                'transacciones_hoy_count': len(ventas_hoy),
+                'total_transacciones': len(set(v['ID_Venta'] for v in ventas)),
+                'transacciones_hoy': ventas_hoy,
+                'productos_mas_vendidos': productos_mas_vendidos
+            }
+            
+        except Exception as e:
+            print(f"Error en estadísticas avanzadas: {str(e)}")
+            return self._estadisticas_avanzadas_vacias()
 
-# Instancia global
-try:
-    sistema = SistemaPocopan()
-    print("✅ Sistema POCOPAN listo en Vercel")
-except Exception as e:
-    print(f"❌ Error iniciando sistema: {e}")
-    sistema = None
+    def _estadisticas_avanzadas_vacias(self):
+        return {
+            'ingresos_hoy': 0,
+            'productos_vendidos_hoy': 0,
+            'monto_historico': 0,
+            'promedio_diario': 0,
+            'transacciones_hoy_count': 0,
+            'total_transacciones': 0,
+            'transacciones_hoy': [],
+            'productos_mas_vendidos': []
+        }
+
+# Instancia global del sistema
+sistema = SistemaPocopan()
 
 # --- DECORADORES DE AUTENTICACIÓN ---
 def login_required(f):
@@ -424,7 +473,18 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- RUTAS ---
+# --- RUTAS PRINCIPALES ---
+@app.route('/')
+def index():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+    
+    # Redirigir según el rol
+    if session.get('rol') == 'admin':
+        return redirect(url_for('dashboard'))
+    else:
+        return redirect(url_for('punto_venta'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -437,7 +497,12 @@ def login():
                 session['usuario'] = usuario
                 session['rol'] = user_config['rol']
                 session['terminal'] = user_config['terminal']
-                return redirect(url_for('index'))
+                
+                # Redirigir según rol
+                if user_config['rol'] == 'admin':
+                    return redirect(url_for('dashboard'))
+                else:
+                    return redirect(url_for('punto_venta'))
         
         return render_template('login.html', error='Usuario o contraseña incorrectos')
     
@@ -448,55 +513,51 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-def get_carrito():
+@app.route('/punto-venta')
+@login_required
+def punto_venta():
+    if session.get('rol') == 'admin':
+        return redirect(url_for('dashboard'))
+    
     usuario = session.get('usuario')
+    terminal = session.get('terminal')
+    
+    # Obtener carrito de la sesión
     if f'carrito_{usuario}' not in session:
         session[f'carrito_{usuario}'] = []
-    return session[f'carrito_{usuario}']
-
-@app.route('/')
-@login_required
-def index():
-    if sistema is None:
-        return render_template('error.html', mensaje="Sistema no disponible")
     
-    usuario = session.get('usuario')
-    rol = session.get('rol')
-    terminal = session.get('terminal')
-        
-    carrito_actual = get_carrito()
+    carrito_actual = session[f'carrito_{usuario}']
     totales = sistema.calcular_totales(carrito_actual)
     
-    contador_actual = sistema.contadores_memory[terminal]["ultimo_cliente"] + 1
+    # Obtener contador actual
+    contadores = sistema.obtener_contadores_desde_json()
+    contador_actual = contadores[terminal]["ultimo_cliente"] + 1
     
     return render_template('pos.html', 
                            sistema=sistema,
                            carrito=carrito_actual, 
                            totales=totales,
                            usuario_actual=usuario,
-                           rol_actual=rol,
+                           rol_actual=session.get('rol'),
                            terminal_actual=terminal,
                            id_cliente_actual=f"CLIENTE-{terminal}-{contador_actual:04d}")
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if sistema is None:
-        return redirect(url_for('index'))
-    
     rol = session.get('rol')
     terminal = session.get('terminal')
     
     if rol == 'admin':
         stats = sistema.obtener_estadisticas_dashboard("TODAS")
-        stats_por_terminal = sistema.obtener_estadisticas_por_terminal()
+        stats_avanzadas = sistema.obtener_estadisticas_avanzadas("TODAS")
     else:
         stats = sistema.obtener_estadisticas_dashboard(terminal)
-        stats_por_terminal = {}
+        stats_avanzadas = sistema.obtener_estadisticas_avanzadas(terminal)
     
     return render_template('dashboard.html', 
                            stats=stats,
-                           stats_por_terminal=stats_por_terminal,
+                           stats_avanzadas=stats_avanzadas,
                            empresa=sistema.config['empresa'],
                            sistema=sistema,
                            rol_actual=rol,
@@ -506,77 +567,33 @@ def dashboard():
 @app.route('/dashboard/<terminal_id>')
 @admin_required
 def dashboard_terminal(terminal_id):
-    if sistema is None:
-        return redirect(url_for('index'))
-        
     if terminal_id not in ['POS1', 'POS2', 'POS3', 'TODAS']:
         return redirect(url_for('dashboard'))
     
     stats = sistema.obtener_estadisticas_dashboard(terminal_id)
+    stats_avanzadas = sistema.obtener_estadisticas_avanzadas(terminal_id)
     
     return render_template('dashboard.html', 
                            stats=stats,
-                           stats_por_terminal={},
+                           stats_avanzadas=stats_avanzadas,
                            empresa=sistema.config['empresa'],
                            sistema=sistema,
                            rol_actual='admin',
                            terminal_actual=terminal_id,
                            now=datetime.now())
 
-@app.route('/diagnostico')
-def diagnostico():
-    if sistema is None:
-        return jsonify({
-            'status': 'ERROR',
-            'mensaje': 'Sistema POCOPAN no pudo inicializarse'
-        }), 500
-        
-    return jsonify({
-        'status': 'OK',
-        'mensaje': 'Sistema POCOPAN operativo',
-        'terminal': 'Vercel Serverless',
-        'catalogo_cargado': sistema.catalogo_cargado,
-        'productos_en_catalogo': len(sistema.productos_disponibles),
-        'ventas_registradas': sum(len(ventas) for ventas in sistema.ventas_memory.values())
-    })
+# ... (continuaría con las demás rutas del carrito, API, etc.)
 
-@app.route('/buscar-productos')
-def buscar_productos_route():
-    if sistema is None:
-        return jsonify([])
-    
-    query = request.args.get('q', '').strip()
-    if len(query) < 2:
-        return jsonify([])
-        
-    productos = sistema.buscar_productos(query)
-    return jsonify(productos)
-
-@app.route('/detalles-producto/<path:producto_nombre>')
-def detalles_producto(producto_nombre):
-    if sistema is None:
-        return jsonify({'error': 'Sistema no disponible'}), 500
-        
-    try:
-        producto_decodificado = unquote(producto_nombre)
-        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
-        
-        detalles = sistema.obtener_detalles_producto(producto_limpio)
-        if detalles:
-            return jsonify(detalles)
-        else:
-            return jsonify({'error': f'Producto no encontrado: {producto_limpio}'}), 404
-            
-    except Exception as e:
-        print(f"Error en detalles-producto: {str(e)}")
-        return jsonify({'error': 'Error interno del servidor'}), 500
+# Rutas de API para el carrito
+def get_carrito():
+    usuario = session.get('usuario')
+    if f'carrito_{usuario}' not in session:
+        session[f'carrito_{usuario}'] = []
+    return session[f'carrito_{usuario}']
 
 @app.route('/agregar-carrito', methods=['POST'])
 @login_required
 def agregar_carrito():
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     try:
         data = request.get_json()
         producto = data.get('producto', '').strip()
@@ -600,15 +617,11 @@ def agregar_carrito():
             return jsonify({'success': False, 'message': message}), 400
             
     except Exception as e:
-        print(f"Error en agregar-carrito: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/eliminar-carrito/<int:index>', methods=['DELETE'])
 @login_required
 def eliminar_carrito(index):
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     carrito_actual = get_carrito()
     success, message, carrito_actual = sistema.eliminar_del_carrito(carrito_actual, index)
     session[f'carrito_{session.get("usuario")}'] = carrito_actual
@@ -626,9 +639,6 @@ def eliminar_carrito(index):
 @app.route('/limpiar-carrito', methods=['DELETE'])
 @login_required
 def limpiar_carrito():
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     carrito_actual = get_carrito()
     success, message, carrito_actual = sistema.limpiar_carrito(carrito_actual)
     session[f'carrito_{session.get("usuario")}'] = carrito_actual
@@ -646,9 +656,6 @@ def limpiar_carrito():
 @app.route('/finalizar-venta', methods=['POST'])
 @login_required
 def finalizar_venta():
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     carrito_actual = get_carrito()
     terminal_id = session.get('terminal')
     success, result = sistema.finalizar_venta(carrito_actual, terminal_id)
@@ -659,20 +666,37 @@ def finalizar_venta():
         return jsonify({
             'success': True,
             'message': 'Venta finalizada exitosamente',
-            'resumen': result,
-            'id_cliente_actual': f"CLIENTE-{terminal_id}-{sistema.contadores_memory[terminal_id]['ultimo_cliente'] + 1:04d}"
+            'resumen': result
         })
     else:
         return jsonify({'success': False, 'message': result}), 400
 
-# === RUTAS DEL EDITOR DE CATÁLOGO ===
+# Rutas de API para productos
+@app.route('/buscar-productos')
+def buscar_productos_route():
+    query = request.args.get('q', '').strip()
+    if len(query) < 2:
+        return jsonify([])
+        
+    productos = sistema.buscar_productos(query)
+    return jsonify(productos)
+
+@app.route('/detalles-producto/<path:producto_nombre>')
+def detalles_producto(producto_nombre):
+    try:
+        producto_decodificado = unquote(producto_nombre)
+        detalles = sistema.obtener_detalles_producto(producto_decodificado)
+        if detalles:
+            return jsonify(detalles)
+        else:
+            return jsonify({'error': 'Producto no encontrado'}), 404
+    except Exception as e:
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
+# Rutas del editor de catálogo (solo admin)
 @app.route('/editor-catalogo')
 @admin_required
 def editor_catalogo():
-    """Editor de catálogo solo para administradores"""
-    if sistema is None:
-        return render_template('error.html', mensaje="Sistema no disponible")
-    
     return render_template('editor_catalogo.html', 
                          sistema=sistema,
                          catalogo=sistema.catalogo,
@@ -683,32 +707,20 @@ def editor_catalogo():
 @app.route('/obtener-producto/<path:producto_nombre>')
 @admin_required
 def obtener_producto(producto_nombre):
-    """Obtener detalles completos de un producto para editar"""
-    if sistema is None:
-        return jsonify({'error': 'Sistema no disponible'}), 500
-        
     try:
         producto_decodificado = unquote(producto_nombre)
-        producto_limpio = re.sub(r'\s+', ' ', producto_decodificado).strip()
         
-        # Buscar producto en el catálogo
         for producto in sistema.catalogo:
-            if producto['Nombre'] == producto_limpio:
+            if producto['Nombre'] == producto_decodificado:
                 return jsonify(producto)
         
         return jsonify({'error': 'Producto no encontrado'}), 404
-            
     except Exception as e:
-        print(f"Error obteniendo producto: {str(e)}")
         return jsonify({'error': 'Error interno del servidor'}), 500
 
 @app.route('/actualizar-producto', methods=['POST'])
 @admin_required
 def actualizar_producto():
-    """Actualizar un producto en el catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     try:
         data = request.get_json()
         producto_original = data.get('producto_original', '').strip()
@@ -725,7 +737,6 @@ def actualizar_producto():
         producto_encontrado = False
         for producto in sistema.catalogo:
             if producto['Nombre'] == producto_original:
-                # Actualizar datos
                 producto['Nombre'] = nuevo_nombre
                 producto['Categoría'] = nueva_categoria
                 producto['Subcategoría'] = nueva_subcategoria
@@ -735,34 +746,26 @@ def actualizar_producto():
                 break
         
         if producto_encontrado:
-            # Actualizar también la lista de productos disponibles
+            # Guardar cambios en Excel
+            df_catalogo = pd.DataFrame(sistema.catalogo)
+            df_catalogo.to_excel('catalogo.xlsx', index=False)
+            
+            # Actualizar lista de productos disponibles
             sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
             
             return jsonify({
                 'success': True,
-                'message': 'Producto actualizado correctamente',
-                'producto_actualizado': {
-                    'nombre': nuevo_nombre,
-                    'categoria': nueva_categoria,
-                    'subcategoria': nueva_subcategoria,
-                    'precio_venta': float(nuevo_precio),
-                    'proveedor': nuevo_proveedor
-                }
+                'message': 'Producto actualizado correctamente'
             })
         else:
             return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
             
     except Exception as e:
-        print(f"Error actualizando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/agregar-producto', methods=['POST'])
 @admin_required
 def agregar_producto():
-    """Agregar un nuevo producto al catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     try:
         data = request.get_json()
         nombre = data.get('nombre', '').strip()
@@ -790,25 +793,23 @@ def agregar_producto():
         }
         
         sistema.catalogo.append(nuevo_producto)
+        
+        # Guardar en Excel
+        df_catalogo = pd.DataFrame(sistema.catalogo)
+        df_catalogo.to_excel('catalogo.xlsx', index=False)
+        
         sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
         
         return jsonify({
             'success': True,
-            'message': 'Producto agregado correctamente',
-            'nuevo_producto': nuevo_producto
+            'message': 'Producto agregado correctamente'
         })
-            
     except Exception as e:
-        print(f"Error agregando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @app.route('/eliminar-producto', methods=['POST'])
 @admin_required
 def eliminar_producto():
-    """Eliminar un producto del catálogo"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
     try:
         data = request.get_json()
         producto_nombre = data.get('producto_nombre', '').strip()
@@ -825,7 +826,10 @@ def eliminar_producto():
                 break
         
         if producto_encontrado:
-            # Actualizar también la lista de productos disponibles
+            # Guardar en Excel
+            df_catalogo = pd.DataFrame(sistema.catalogo)
+            df_catalogo.to_excel('catalogo.xlsx', index=False)
+            
             sistema.productos_disponibles = [p['Nombre'] for p in sistema.catalogo]
             
             return jsonify({
@@ -836,136 +840,18 @@ def eliminar_producto():
             return jsonify({'success': False, 'message': 'Producto no encontrado'}), 404
             
     except Exception as e:
-        print(f"Error eliminando producto: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
-# === RUTAS PARA ESTADÍSTICAS AVANZADAS ===
-
-@app.route('/estadisticas-avanzadas')
-@login_required
-def estadisticas_avanzadas():
-    """Obtener estadísticas avanzadas para el dashboard"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        terminal_id = request.args.get('terminal', 'TODAS')
-        
-        # Obtener todas las ventas según la terminal seleccionada
-        if terminal_id == "TODAS":
-            ventas = []
-            for terminal in ['POS1', 'POS2', 'POS3']:
-                ventas.extend(sistema.ventas_memory.get(terminal, []))
-        else:
-            ventas = sistema.ventas_memory.get(terminal_id, [])
-        
-        # Estadísticas básicas
-        fecha_hoy = date.today().strftime("%Y-%m-%d")
-        ventas_hoy = [v for v in ventas if v['Fecha'] == fecha_hoy]
-        ventas_totales = len(set(v['ID_Venta'] for v in ventas))
-        
-        # Calcular ingresos de hoy
-        ingresos_hoy = sum(v['Total_Venta'] for v in ventas_hoy)
-        
-        # Calcular monto histórico (todas las ventas)
-        monto_historico = sum(v['Total_Venta'] for v in ventas)
-        
-        # Productos vendidos hoy
-        productos_vendidos_hoy = sum(v['Cantidad'] for v in ventas_hoy)
-        
-        # Productos más vendidos (top 5) - SOLO HOY
-        productos_ventas_hoy = {}
-        for venta in ventas_hoy:
-            producto = venta['Producto']
-            if producto in productos_ventas_hoy:
-                productos_ventas_hoy[producto] += venta['Cantidad']
-            else:
-                productos_ventas_hoy[producto] = venta['Cantidad']
-        
-        productos_mas_vendidos = sorted(
-            [{'producto': k, 'cantidad': v} for k, v in productos_ventas_hoy.items()],
-            key=lambda x: x['cantidad'],
-            reverse=True
-        )[:5]
-        
-        # Calcular promedio diario (simulado - días con ventas)
-        dias_con_ventas = max(1, len(set(v['Fecha'] for v in ventas)))
-        promedio_diario = monto_historico / dias_con_ventas
-        
-        estadisticas = {
-            'ingresos_hoy': ingresos_hoy,
-            'productos_vendidos_hoy': productos_vendidos_hoy,
-            'monto_historico': monto_historico,
-            'promedio_diario': promedio_diario,
-            'transacciones_hoy_count': len(ventas_hoy),
-            'total_transacciones': ventas_totales
-        }
-        
-        return jsonify({
-            'success': True,
-            'estadisticas': estadisticas,
-            'transacciones_hoy': ventas_hoy,
-            'productos_mas_vendidos': productos_mas_vendidos
-        })
-        
-    except Exception as e:
-        print(f"Error en estadísticas avanzadas: {str(e)}")
-        return jsonify({'success': False, 'message': 'Error interno'}), 500
-
-@app.route('/descargar-excel')
-@login_required
-def descargar_excel():
-    """Descargar todas las ventas en Excel"""
-    if sistema is None:
-        return jsonify({'success': False, 'message': 'Sistema no disponible'}), 500
-        
-    try:
-        terminal_id = request.args.get('terminal', 'TODAS')
-        
-        # Obtener todas las ventas según la terminal seleccionada
-        if terminal_id == "TODAS":
-            ventas = []
-            for terminal in ['POS1', 'POS2', 'POS3']:
-                ventas.extend(sistema.ventas_memory.get(terminal, []))
-        else:
-            ventas = sistema.ventas_memory.get(terminal_id, [])
-        
-        # Crear DataFrame con todas las ventas
-        df_ventas = pd.DataFrame(ventas)
-        
-        # Crear archivo Excel en memoria
-        from io import BytesIO
-        output = BytesIO()
-        
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df_ventas.to_excel(writer, sheet_name='Todas_las_Ventas', index=False)
-            
-            # Agregar resumen por día
-            if not df_ventas.empty:
-                df_ventas['Fecha'] = pd.to_datetime(df_ventas['Fecha'])
-                ventas_por_dia = df_ventas.groupby('Fecha').agg({
-                    'ID_Venta': 'nunique',
-                    'Total_Venta': 'sum',
-                    'Cantidad': 'sum'
-                }).reset_index()
-                ventas_por_dia.columns = ['Fecha', 'Transacciones', 'Ingresos_Totales', 'Productos_Vendidos']
-                ventas_por_dia.to_excel(writer, sheet_name='Resumen_Por_Dia', index=False)
-        
-        output.seek(0)
-        
-        # Crear respuesta con el archivo Excel
-        from flask import send_file
-        return send_file(
-            output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=f'ventas_pocopan_{date.today().strftime("%Y-%m-%d")}.xlsx'
-        )
-        
-    except Exception as e:
-        print(f"Error generando Excel: {str(e)}")
-        return jsonify({'success': False, 'message': 'Error al generar el archivo'}), 500
-
+# Ruta de diagnóstico
+@app.route('/diagnostico')
+def diagnostico():
+    return jsonify({
+        'status': 'OK',
+        'mensaje': 'Sistema POCOPAN operativo',
+        'catalogo_cargado': sistema.catalogo_cargado,
+        'productos_en_catalogo': len(sistema.productos_disponibles),
+        'ventas_registradas': len(sistema.obtener_ventas_desde_excel())
+    })
 
 @app.errorhandler(404)
 def not_found(error):
@@ -977,3 +863,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
+    
