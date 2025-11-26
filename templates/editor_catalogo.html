@@ -19,14 +19,14 @@
     <div class="grid grid-3 mb-3">
         <div class="card">
             <div class="card-body text-center">
-                <h3 style="color: var(--naranja-primario); font-size: 2rem; margin: 0;">{{ catalogo|length }}</h3>
+                <h3 style="color: var(--naranja-primario); font-size: 2rem; margin: 0;">{{ productos|length }}</h3>
                 <p style="color: var(--texto-gris); margin: 0;">Productos Totales</p>
             </div>
         </div>
         <div class="card">
             <div class="card-body text-center">
                 <h3 style="color: #28a745; font-size: 2rem; margin: 0;">
-                    {{ (catalogo|selectattr('Estado', 'equalto', 'Disponible')|list)|length }}
+                    {{ (productos|selectattr('estado', 'equalto', 'Disponible')|list)|length }}
                 </h3>
                 <p style="color: var(--texto-gris); margin: 0;">Productos Disponibles</p>
             </div>
@@ -35,9 +35,9 @@
             <div class="card-body text-center">
                 <h3 style="color: #17a2b8; font-size: 2rem; margin: 0;">
                     {% set categorias = [] %}
-                    {% for producto in catalogo %}
-                        {% if producto.Categoria not in categorias %}
-                            {% set _ = categorias.append(producto.Categoria) %}
+                    {% for producto in productos %}
+                        {% if producto.categoria not in categorias %}
+                            {% set _ = categorias.append(producto.categoria) %}
                         {% endif %}
                     {% endfor %}
                     {{ categorias|length }}
@@ -60,10 +60,10 @@
                     <select id="filtroCategoria" class="form-control" onchange="filtrarProductos()">
                         <option value="all">Todas las categorías</option>
                         {% set categorias_unicas = [] %}
-                        {% for producto in catalogo %}
-                            {% if producto.Categoria and producto.Categoria not in categorias_unicas %}
-                                {% set _ = categorias_unicas.append(producto.Categoria) %}
-                                <option value="{{ producto.Categoria }}">{{ producto.Categoria }}</option>
+                        {% for producto in productos %}
+                            {% if producto.categoria and producto.categoria not in categorias_unicas %}
+                                {% set _ = categorias_unicas.append(producto.categoria) %}
+                                <option value="{{ producto.categoria }}">{{ producto.categoria }}</option>
                             {% endif %}
                         {% endfor %}
                     </select>
@@ -79,39 +79,39 @@
         <div class="card-header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span>Lista de Productos</span>
-                <span class="user-terminal" id="contador-productos">{{ catalogo|length }} productos</span>
+                <span class="user-terminal" id="contador-productos">{{ productos|length }} productos</span>
             </div>
         </div>
         <div class="card-body" style="padding: 0;">
             <div class="catalogo-scroll" style="max-height: 60vh; overflow-y: auto; padding: 1rem;">
                 <div id="lista-productos">
-                    {% for producto in catalogo %}
+                    {% for producto in productos %}
                     <div class="producto-item" 
-                         data-categoria="{{ producto.Categoria }}"
-                         data-nombre="{{ producto.Nombre|lower }}"
+                         data-categoria="{{ producto.categoria }}"
+                         data-nombre="{{ producto.nombre|lower }}"
                          style="border: 1px solid var(--naranja-borde); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
                         
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div style="flex: 1;">
                                 <h3 style="color: var(--naranja-primario); margin: 0 0 0.5rem 0; font-size: 1.1rem;">
-                                    {{ producto.Nombre }}
+                                    {{ producto.nombre }}
                                 </h3>
                                 <div style="display: flex; gap: 1rem; font-size: 0.9rem; color: var(--texto-gris); margin-bottom: 0.5rem;">
-                                    <span><strong>Categoría:</strong> {{ producto.Categoria }}</span>
-                                    {% if producto.SubCAT and producto.SubCAT != '' %}
-                                    <span><strong>Subcategoría:</strong> {{ producto.SubCAT }}</span>
+                                    <span><strong>Categoría:</strong> {{ producto.categoria }}</span>
+                                    {% if producto.subcategoria and producto.subcategoria != '' %}
+                                    <span><strong>Subcategoría:</strong> {{ producto.subcategoria }}</span>
                                     {% endif %}
-                                    <span><strong>Proveedor:</strong> {{ producto.Proveedor }}</span>
+                                    <span><strong>Proveedor:</strong> {{ producto.proveedor }}</span>
                                 </div>
                                 <div style="font-size: 1.1rem; font-weight: bold; color: #28a745;">
-                                    ${{ "%.2f"|format(producto['Precio Venta']) }}
+                                    ${{ "%.2f"|format(producto.precio_venta) }}
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                                <button onclick="editarProducto('{{ producto.Nombre }}')" class="btn btn-primary" style="padding: 8px 16px;">
+                                <button onclick="editarProducto('{{ producto.nombre }}')" class="btn btn-primary" style="padding: 8px 16px;">
                                     ✏️ Editar
                                 </button>
-                                <button onclick="eliminarProducto('{{ producto.Nombre }}')" class="btn btn-danger" style="padding: 8px 16px;">
+                                <button onclick="eliminarProducto('{{ producto.nombre }}')" class="btn btn-danger" style="padding: 8px 16px;">
                                     🗑️ Eliminar
                                 </button>
                             </div>

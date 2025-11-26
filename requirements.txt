@@ -1,6 +1,10 @@
 Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.23
 pandas
 openpyxl
-Werkzeug
-gunicorn
+Werkzeug==2.3.7
+gunicorn==21.2.0
 numpy
+python-dotenv==1.0.0

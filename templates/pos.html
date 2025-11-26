@@ -24,7 +24,7 @@
             <div class="card-header">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>Catálogo de Productos</span>
-                    <span class="user-terminal">{{ sistema.productos_disponibles|length }} productos</span>
+                    <span class="user-terminal">{{ productos|length }} productos</span>
                 </div>
             </div>
             <div class="card-body">
@@ -38,42 +38,40 @@
 
                     <select id="filtroCategoria" class="form-control" onchange="filtrarProductos()" style="min-width: 140px; font-size: 0.85rem;">
                         <option value="all">Todas las categorías</option>
-                        {% if sistema.catalogo_cargado %}
-                            {% set categorias_unicas = [] %}
-                            {% for producto in sistema.catalogo %}
-                                {% if producto.Categoria and producto.Categoria not in categorias_unicas %}
-                                    {% set _ = categorias_unicas.append(producto.Categoria) %}
-                                    <option value="{{ producto.Categoria }}">{{ producto.Categoria }}</option>
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
+                        {% set categorias_unicas = [] %}
+                        {% for producto in productos %}
+                            {% if producto.categoria and producto.categoria not in categorias_unicas %}
+                                {% set _ = categorias_unicas.append(producto.categoria) %}
+                                <option value="{{ producto.categoria }}">{{ producto.categoria }}</option>
+                            {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
 
                 <!-- Lista de Productos con Scroll Interno -->
                 <div class="scroll-area">
                     <div id="lista-productos">
-                        {% for producto in sistema.catalogo %}
+                        {% for producto in productos %}
                         <div class="producto-item"
-                             data-categoria="{{ producto.Categoria }}"
-                             data-nombre="{{ producto.Nombre|lower }}"
-                             onclick="seleccionarProducto('{{ producto.Nombre }}')">
+                             data-categoria="{{ producto.categoria }}"
+                             data-nombre="{{ producto.nombre|lower }}"
+                             onclick="seleccionarProducto('{{ producto.nombre }}')">
 
                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                 <div style="flex: 1;">
                                     <h3 style="color: var(--naranja-primario); margin: 0 0 0.3rem 0; font-size: 0.9rem; line-height: 1.2;">
-                                        {{ producto.Nombre }}
+                                        {{ producto.nombre }}
                                     </h3>
                                     <div style="display: flex; gap: 0.8rem; font-size: 0.75rem; color: var(--texto-gris); margin-bottom: 0.3rem;">
-                                        <span><strong>Categoría:</strong> {{ producto.Categoria }}</span>
-                                        {% if producto.SubCAT and producto.SubCAT != '' %}
-                                        <span><strong>Sub:</strong> {{ producto.SubCAT }}</span>
+                                        <span><strong>Categoría:</strong> {{ producto.categoria }}</span>
+                                        {% if producto.subcategoria and producto.subcategoria != '' %}
+                                        <span><strong>Sub:</strong> {{ producto.subcategoria }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
                                 <div style="text-align: right; min-width: 100px;">
                                     <div style="font-size: 1rem; font-weight: bold; color: var(--naranja-primario); margin-bottom: 0.3rem;">
-                                        ${{ "%.2f"|format(producto['Precio Venta']) }}
+                                        ${{ "%.2f"|format(producto.precio_venta) }}
                                     </div>
                                     <button class="btn btn-success btn-sm" style="width: 100%;">
                                         Agregar
@@ -88,7 +86,7 @@
                 <!-- Contador de productos visibles -->
                 <div style="text-align: center; margin-top: 0.8rem; padding: 0.4rem; background: var(--naranja-fondo); border-radius: 4px;">
                     <small style="color: var(--naranja-primario); font-size: 0.75rem;">
-                        Mostrando <span id="contador-productos">{{ sistema.catalogo|length }}</span> de {{ sistema.catalogo|length }} productos
+                        Mostrando <span id="contador-productos">{{ productos|length }}</span> de {{ productos|length }} productos
                     </small>
                 </div>
             </div>

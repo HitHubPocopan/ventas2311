@@ -1,0 +1,50 @@
+PASOS PARA DEPLOYAR EN VERCEL
+
+1. VERIFICAR CAMBIOS LOCALES
+   Los siguientes archivos han sido modificados:
+   - app.py (diccionarios, AJAX auth, detección de Vercel)
+   - api/index.py (entrada para Vercel)
+   - vercel.json (configuración simplificada)
+   - templates/editor_catalogo.html (claves de productos)
+   - Nuevos: .vercelignore, CAMBIOS_VERCEL.md, PASOS_DEPLOYMENT.txt
+
+2. GIT COMMANDS
+   git add -A
+   git commit -m "Fix Vercel: AJAX routes, diccionarios, y soporto para filesystem ephemeral"
+   git push
+
+3. ESPERADO
+   - Vercel iniciará reconstrucción automáticamente
+   - Esperar 2-3 minutos
+   - Ver el progreso en dashboard.vercel.com
+
+4. PRUEBAS EN VERCEL
+   https://ventas2311.vercel.app/login
+   
+   Usuarios:
+   - admin / admin123 → Dashboard
+   - pos1 / pos1123 → POS
+
+5. CAMBIOS CLAVE QUE RESUELVEN EL PROBLEMA
+   
+   a) Diccionarios consistentes:
+      - ANTES: 'Categoría' vs 'Categoria' 
+      - AHORA: Solo 'Categoria' en todo el código
+      - ANTES: 'Subcategoría' vs 'SubCAT'
+      - AHORA: Solo 'SubCAT' en todo el código
+   
+   b) AJAX autenticación:
+      - ANTES: admin_required retornaba HTML 302 redirect
+      - AHORA: admin_required retorna JSON 403 para AJAX
+   
+   c) Vercel filesystem:
+      - ANTES: Intentaba guardar archivos (falla silenciosa)
+      - AHORA: Detecta Vercel y solo usa memoria
+   
+   d) Catálogo:
+      - ANTES: Fallaba si no encontraba Excel
+      - AHORA: En Vercel usa catálogo de emergencia
+
+6. SI SIGUE FALLANDO
+   Verificar en console.log() del navegador los errores exactos
+   Ver logs en Vercel: https://vercel.com/...  → Deployments → Logs
