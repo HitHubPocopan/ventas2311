@@ -11,9 +11,9 @@ from models import db
 
 app.config['ENV'] = 'production'
 
-try:
-    with app.app_context():
+with app.app_context():
+    try:
         db.create_all()
         init_db()
-except Exception as e:
-    print(f"Error initializing database: {e}")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
