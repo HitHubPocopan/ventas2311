@@ -1,11 +1,4 @@
 {
   "version": 2,
-  "buildCommand": "pip install -r requirements.txt",
-  "outputDirectory": ".",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.py"
-    }
-  ]
+  "buildCommand": "pip install -r requirements.txt"
 }
